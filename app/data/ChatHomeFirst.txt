@@ -1,0 +1,335 @@
+
+    'use client'
+    import { useUser } from '@clerk/nextjs';
+    import axios from 'axios';
+    import Image from 'next/image';
+    import React, { useEffect, useRef, useState } from 'react';
+    import { Skeleton } from "@/components/ui/skeleton"
+    import Link from 'next/link';
+    import { Button } from "@/components/ui/button"
+    import { useToast } from "@/components/ui/use-toast"
+
+    function ChatHome() {
+      const [userDetails, setUserDetails] = useState([]);
+      const [selectedUser, setSelectedUser] = useState(null);
+      const { toast } = useToast()
+      const {user} = useUser()
+      const [userID, setuserID] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [messages, setMessages] = useState([]);
+      const [message, setMessage] = useState("");
+      const [searchQuery, setSearchQuery] = useState("");
+      const messagesEndRef = useRef(null);
+      // const lod = [1,2,3,4,5,6,7,8,9,10]
+      const lod = Array.from({ length: 20 }, (_, index) => index + 1);
+      const lodd = Array.from({ length: 20 }, (_, index) => index + 1);
+      
+      
+      //  search input change
+      const SearchChange = (e) => {
+        setSearchQuery(e.target.value);
+      };
+
+      // Scroll To End
+      useEffect(() => {
+        const scrollMessagesToEnd = () => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+          }
+        };
+        const timeout = setTimeout(() => {
+          scrollMessagesToEnd();
+        },1);
+        return () => clearTimeout(timeout);
+      }, [messages]);
+      //  get users
+      useEffect(() => {
+        axios.get('http://localhost:9999/users')
+          .then((res) => {
+            setUserDetails(res.data);
+          })
+          .catch((error) => {
+            console.error('Error fetching user details:', error);
+          });
+      }, []);
+
+      // Get Messages
+      useEffect(() => {
+        const fetchData = async () => {
+          try {
+            const response = await axios.get('http://localhost:9999/messages');
+            setMessages(response.data);
+          } catch (error) {
+            console.error('Error fetching messages:', error);
+          }
+        };
+        fetchData();
+      },[]);
+
+      // SelectedUser
+      useEffect(() => {
+        const UserSelected = localStorage.getItem("SelectedUser");
+        if (UserSelected) {
+          setSelectedUser(JSON.parse(UserSelected));
+        }
+      }, []);
+      // SendMessage
+      const SendMessage = async () => {
+        setLoading(true);
+        try {
+          const data = {
+            from: user.emailAddresses[0].emailAddress,
+            fromimg: user.imageUrl,
+            to: selectedUser.email,
+            toimg: selectedUser.urlimage,
+            message: message
+          };
+          const response = await axios.post('http://localhost:9999/messages', data);
+          console.log('Message sent successfully:', response.data);
+          toast({
+            description: "Your message has been sent.",
+          })
+          setMessage("")
+          fetchData();
+        } catch (error) {
+          console.error('Error sending message:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      const fetchData = async () => {
+        try {
+          const response = await axios.get('http://localhost:9999/messages');
+          setMessages(response.data);
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+        }
+      };
+      
+
+      return (
+        <div>
+          {/* LAPTOP */}
+          <div className='md:block hidden duration-500'>
+          <div className=" flex flex-row h-full overflow-hidden bg-gradient-to-r from-purple-500 to-indigo-500">
+          {/* Users list */}
+          <div className="w-full sm:w-1/3 md:w-1/4 duration-500 bg-gray-800 text-white p-4 overflow-y-auto">
+            {/* Search input */}
+            <input
+              type="search"
+              placeholder="Search by Name or Email"
+              value={searchQuery}
+              onChange={SearchChange}
+              className="w-full px-4 py-2 mb-4 rounded-md bg-gray-700 text-white focus:outline-none"
+            />
+
+            {/* Users List */}
+            <div className="text-lg  border-yellow-500 font-bold mb-4 sticky top-0 border-b py-1 bg-gray-800 z-10">
+              {searchQuery === "" ? "Friends" : "Users List"}
+            </div>
+            <div className=" overflow-y-auto max-h-[400px] scrollbar-none">
+              {userDetails.length === 0 ? (
+                <div className="space-y-2">
+                  {lodd.map((l, i) => (
+                    <div key={i} className="flex items-center space-x-4">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[250px]" />
+                        <Skeleton className="h-4 w-[200px]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : ( <div>
+                {/* Users List */}
+                <div className='overflow-y-auto max-h-[420px]  scrollbar-none'>
+                {userDetails
+                    .filter((user) =>
+                      user.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((User, i) => (
+                      <div 
+                        key={i}
+                        onClick={() => {
+                          setSelectedUser(User);
+                          localStorage.setItem("SelectedUser", JSON.stringify(User));
+                          const scrollMessagesToEnd = () => {
+                            if (messagesEndRef.current) {
+                              messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+                            }
+                          };
+                          const timeout = setTimeout(() => {
+                            scrollMessagesToEnd();
+                          }, 1);
+                          return () => clearTimeout(timeout);
+                        }}
+                        className={`${searchQuery === ""  ? "hidden" : ""} flex items-center gap-4 p-2 duration-500 hover:bg-gray-700 cursor-pointer rounded-lg transition ${
+                          selectedUser && selectedUser.email === User.email ? 'bg-gray-700' : ''
+                        }`}
+                      >
+                        <div className="relative w-12 h-12">
+                          <Image
+                            src={User.urlimage}
+                            alt="Profile"
+                            className="rounded-full"
+                            layout="fill"
+                          />
+                        </div>
+                        <p className="text-lg">{User.fullname}</p>
+                      </div>
+                 ))}
+                 {/* User ilya message */}
+                 {user && user.emailAddresses && user.emailAddresses.length > 0 &&
+                    userDetails.filter((User) =>
+                    User.email === user.emailAddresses[0].emailAddress ||
+                    messages.some((msg) => msg.from === User.email || msg.to === User.email)
+                  )
+                  .map((User, i) => (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        setSelectedUser(User);
+                        localStorage.setItem("SelectedUser", JSON.stringify(User));
+                        const scrollMessagesToEnd = () => {
+                          if (messagesEndRef.current) {
+                            messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+                          }
+                        };
+                        const timeout = setTimeout(() => {
+                          scrollMessagesToEnd();
+                        }, 1);
+                        return () => clearTimeout(timeout);
+                      }}
+                      className={`${searchQuery === "" ? "" : "hidden"} flex items-center gap-4 p-2 duration-500 hover:bg-gray-700 cursor-pointer rounded-lg transition ${
+                        selectedUser && selectedUser.email === User.email ? 'bg-gray-700' : ''
+                      }`}
+                    >
+                      <div className="relative w-12 h-12">
+                        <Image
+                          src={User.urlimage}
+                          alt="Profile"
+                          className="rounded-full"
+                          layout="fill"
+                        />
+                      </div>
+                      <p className="text-lg">{User.fullname}</p>
+                    </div>
+                  ))}
+                </div>       
+                </div>
+              )}
+              
+              
+            </div>
+          </div>
+          {/* Message window on the right */}
+          <nav className={`${selectedUser ? "" : "hidden"} w-full md:w-3/4`}>
+          <div className={` flex flex-col justify-between`}>
+          <div className="flex-1 p-2 ">
+            {/* selectedUser */}
+              <h2 className="mb-2 bg-slate-200 py-1 rounded-lg px-4">
+                {selectedUser && (
+                  <div className="flex items-center justify-between gap-4">
+                    <Link href={`/${selectedUser.username}/${selectedUser._id}`} className="cursor-pointer hover:scale-105 duration-300 flex gap-2 items-center">
+                      <Image
+                        src={selectedUser.urlimage}
+                        alt="Profile"
+                        className="rounded-full"
+                        width={48}
+                        height={48}
+                      />
+                      <p className="font-bold">{selectedUser.fullname}</p>
+                    </Link>
+                    <p className="font-bold md:block hidden">{selectedUser.email}</p>
+                    <p className="font-bold md:block hidden">{selectedUser.phoneNumber}</p>
+                  </div>
+                )}
+              </h2>
+              {/* Messages */}
+              <div className="bg-white p-4 rounded-lg shadow-lg h-[350px] scrollbar-non
+               overflow-y-auto" ref={messagesEndRef}>
+                {messages.length === 0 ? (
+                  <div className='flex justify-around'>
+                    <div className="space-y-3">
+                    {lod.map((l, i) => (
+                      <div key={i} className="flex items-center space-x-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-[250px]" />
+                          <Skeleton className="h-4 w-[200px]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    {lod.map((l, i) => (
+                      <div key={i} className="flex items-center space-x-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-[250px]" />
+                          <Skeleton className="h-4 w-[200px]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  </div>
+                ) : (
+                  messages.filter((fl) => {
+                      return (
+                        (fl.from === user?.emailAddresses[0]?.emailAddress &&
+                          fl.to === selectedUser.email) ||
+                        (fl.from === selectedUser.email &&
+                          fl.to === user?.emailAddresses[0]?.emailAddress)
+                      );
+                    }).map((msg, index) => {
+                      const DateMsg = new Date(msg.createdAt)
+                      return (
+                        <div>
+                          <div key={index} className={`mb-2 ${(msg.from || msg.to) === user.emailAddresses[0].emailAddress ? "float-righ " : " float-lef"}`}>
+                        <div className={`${(msg.from || msg.to) === user.emailAddresses[0].emailAddress ? "flex items-center flex-row-reverse gap-2" : "flex items-center  gap-2"}`}>
+                        <img src={msg.fromimg} width={40} className='rounded-full' />
+                        <p className={`whitespace-pre-wrap break-all  ${(msg.from || msg.to) === user.emailAddresses[0].emailAddress ? "bg-sky-500" : "bg-green-500"} p-2  rounded-md`}>
+                          {msg.message}
+                        </p> 
+                        </div>
+                          </div>
+                          <span className={` flex gap-2 mb-1  ${(msg.from || msg.to) === user.emailAddresses[0].emailAddress ? "justify-end mr-14 " : " ml-14"}  text-sm`}>
+                           <p className=' text-gray-700'>{`${DateMsg.getFullYear()}/${DateMsg.getMonth()}/${DateMsg.getDay()}`}</p>
+                           <p className=' text-gray-900'>{DateMsg.toLocaleTimeString()}</p>
+                        </span>
+                        </div>
+                      )
+                      })
+                )}
+              </div>
+              {/* Input Messgage */}
+              <div className="bg-gray-200 p-2 mt-2 rounded-md">
+              <div className="flex items-center gap-4 ">
+                <textarea
+                  type="text"
+                  placeholder="Enter your message here..."
+                  value={message} 
+                  onChange={(e)=>{setMessage(e.target.value)}}
+                  className="flex-1 border-2  border-gray-300 rounded-lg p-2  focus:outline-none transition duration-300"
+                />
+                <Button onClick={SendMessage} disabled={loading || message === ""} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-300">
+                {loading ? <i className="fa fa-spinner fa-spin"></i> : 'Send'}
+                </Button>
+              </div>
+            </div>
+            </div>
+          </div>
+          </nav>
+        </div>
+        </div>
+          {/* MOBILE */}
+          <div className='md:hidden block'>
+            
+          </div>
+        </div>
+      );
+    }
+
+    export default ChatHome;

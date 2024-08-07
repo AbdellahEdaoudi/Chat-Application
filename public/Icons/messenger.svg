@@ -1,0 +1,26 @@
+<svg
+  id="messengerLogotype"
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 50 50"
+>
+  <circle cx="25" cy="25" r="25" fill="url(#messenger-1)"></circle>
+  <path
+    fill="#fff"
+    d="M10 24.55C10 16.19 16.55 10 25 10s15 6.19 15 14.55S33.45 39.1 25 39.1c-1.518 0-2.974-.2-4.342-.577a1.197 1.197 0 0 0-.801.06l-2.977 1.314a1.2 1.2 0 0 1-1.684-1.062l-.082-2.668a1.198 1.198 0 0 0-.403-.855C11.792 32.702 10 28.923 10 24.55Zm10.399-2.735-4.406 6.99c-.423.671.401 1.427 1.033.948l4.733-3.592a.9.9 0 0 1 1.084-.004l3.505 2.629a2.25 2.25 0 0 0 3.253-.6l4.407-6.991c.422-.67-.402-1.427-1.034-.948L28.24 23.84a.9.9 0 0 1-1.084.003l-3.505-2.629a2.25 2.25 0 0 0-3.253.6Z"
+  ></path>
+  <defs>
+    <radialGradient
+      id="messenger-1"
+      cx="0"
+      cy="0"
+      r="1"
+      gradientTransform="rotate(-57.092 50.523 16.02) scale(54.4798)"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop stop-color="#09F"></stop>
+      <stop offset="0.61" stop-color="#A033FF"></stop>
+      <stop offset="0.935" stop-color="#FF5280"></stop>
+      <stop offset="1" stop-color="#FF7061"></stop>
+    </radialGradient>
+  </defs>
+</svg>

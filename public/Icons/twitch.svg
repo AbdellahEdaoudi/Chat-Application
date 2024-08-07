@@ -1,0 +1,16 @@
+<svg id="twitchLogotype" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+  <circle cx="25" cy="25" r="25" fill="#9147FF"></circle>
+  <path d="M16 11H36V23.2222L30.1176 32.3889L16 33V11Z" fill="white"></path>
+  <path
+    d="M16.4732 10L10.9375 15.5357V35.4643H17.5804V41L23.1161 35.4643H27.5446L37.5089 25.5V10H16.4732ZM35.2946 24.3929L30.8661 28.8214H26.4375L22.5625 32.6964V28.8214H17.5804V12.2143H35.2946V24.3929Z"
+    fill="black"
+  ></path>
+  <path
+    d="M31.9733 16.0893H29.759V22.7321H31.9733V16.0893Z"
+    fill="black"
+  ></path>
+  <path
+    d="M25.8839 16.0893H23.6696V22.7321H25.8839V16.0893Z"
+    fill="black"
+  ></path>
+</svg>
