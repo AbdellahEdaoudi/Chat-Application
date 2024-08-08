@@ -7,6 +7,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MyContext } from "../Context/MyContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 function UserListMobile({ selectedUser, setSelectedUser}) {
   const { user } = useUser();
@@ -123,7 +135,9 @@ function UserListMobile({ selectedUser, setSelectedUser}) {
                           : ""
                       }`}
                     >
-                      <div onClick={()=>{router.push(`/${User.username}`)}} className="relative w-12 h-12">
+                      <AlertDialog>
+                     <AlertDialogTrigger>
+                     <div className="relative w-12 h-12">
                         <Image
                           src={User.urlimage}
                           alt="Profile"
@@ -131,6 +145,29 @@ function UserListMobile({ selectedUser, setSelectedUser}) {
                           layout="fill"
                         />
                       </div>
+                     </AlertDialogTrigger>
+                     <AlertDialogContent>
+                       <AlertDialogHeader>
+                         {/* <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> */}
+                         <AlertDialogDescription>
+  
+                        <div className="flex justify-center">
+                        <Image
+                          src={User.urlimage}
+                          alt="Profile"
+                          className="rounded-full"
+                          width={200}
+                          height={200}
+                        />
+                        </div>
+                         </AlertDialogDescription>
+                       </AlertDialogHeader>
+                       <AlertDialogFooter>
+                         <AlertDialogCancel>Cancel</AlertDialogCancel>
+                       </AlertDialogFooter>
+                     </AlertDialogContent>
+                   </AlertDialog>
+                   
                       <div onClick={()=>router.push(`/message/to/${User.username}`)} className='flex flex-col'>
                       <div  className="cursor-pointer p-4 hover:bg-gray-200">
                         <p className="text-lg">{User.fullname}</p>
@@ -183,14 +220,38 @@ function UserListMobile({ selectedUser, setSelectedUser}) {
                             : ""
                         }`}
                       >
-                        <Link href={`/${User.username}`}  className="relative w-12 h-12">
-                          <Image
-                            src={User.urlimage}
-                            alt="Profile"
-                            className="rounded-full"
-                            layout="fill"
-                          />
-                        </Link>
+                        <AlertDialog>
+                     <AlertDialogTrigger>
+                     <div className="relative w-12 h-12">
+                        <Image
+                          src={User.urlimage}
+                          alt="Profile"
+                          className="rounded-full"
+                          layout="fill"
+                        />
+                      </div>
+                     </AlertDialogTrigger>
+                     <AlertDialogContent>
+                       <AlertDialogHeader>
+                         {/* <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> */}
+                         <AlertDialogDescription>
+  
+                        <div className="flex justify-center">
+                        <Image
+                          src={User.urlimage}
+                          alt="Profile"
+                          className="rounded-full"
+                          width={200}
+                          height={200}
+                        />
+                        </div>
+                         </AlertDialogDescription>
+                       </AlertDialogHeader>
+                       <AlertDialogFooter>
+                         <AlertDialogCancel>Cancel</AlertDialogCancel>
+                       </AlertDialogFooter>
+                     </AlertDialogContent>
+                   </AlertDialog>
                         <div onClick={()=>router.push(`/message/to/${User.username}`)} className="flex flex-col">
                           <p className="text-lg">{User.fullname}</p>
                           <p className="text-[10px] text-gray-500">

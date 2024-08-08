@@ -15,6 +15,17 @@ import { EllipsisVertical} from "lucide-react";
 import Linkify from "linkify-react";
 import { MyContext } from "../Context/MyContext";
 import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function Messages({ selectedUser }) {
   const { toast } = useToast();
@@ -196,8 +207,9 @@ function Messages({ selectedUser }) {
           <h2 className="mb-2 bg-slate-200 py-1 rounded-lg px-4">
             {selectedUser ? (
               <div className="flex items-center justify-between gap-4">
-                <Link
-                  href={`/`}
+                <AlertDialog>
+  <AlertDialogTrigger>
+  <div
                   className="cursor-pointer hover:scale-105 duration-300 flex gap-2 items-center"
                 >
                   <div className="w-12 h-12 rounded-full overflow-hidden">
@@ -210,7 +222,36 @@ function Messages({ selectedUser }) {
                    />
                    </div>
                   <p className="font-bold">{selectedUser.fullname}</p>
-                </Link>
+                </div>
+  </AlertDialogTrigger>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      {/* <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> */}
+      <AlertDialogDescription>
+  <div className="flex flex-col items-center bg-gray-100 p-4 rounded-lg shadow-lg">
+    <div className="flex justify-center">
+      <Image
+        width={150}  // حجم أقل لملاءمة التصميم
+        height={150}
+        src={selectedUser.urlimage}
+        alt="Profile Image"
+        className="rounded-full border-4 border-green-500"
+      />
+    </div>
+    <div className="flex justify-center text-3xl font-semibold py-3 text-gray-800">
+      {selectedUser.username}
+    </div>
+  </div>
+</AlertDialogDescription>
+
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      {/* <AlertDialogAction>Continue</AlertDialogAction> */}
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+
                 <p className="font-bold md:block hidden">
                   {selectedUser.email}
                 </p>
