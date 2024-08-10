@@ -42,7 +42,7 @@ function Messages({ selectedUser }) {
   const [idMsg, setIdMsg] = useState("");
   const messagesEndRef = useRef(null);
   const lod = Array.from({ length: 20 }, (_, index) => index + 1);
-  const {SERVER_URL,userDetails,EmailUser} = useContext(MyContext);
+  const {SERVER_URL_V,SERVER_URL,userDetails,EmailUser} = useContext(MyContext);
   const filtUser = userDetails.find((fl)=>fl.email === EmailUser)
   const router = useRouter();
 
@@ -63,7 +63,7 @@ function Messages({ selectedUser }) {
   useEffect(() => {
     const getMessages = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`);
         setMessages(response.data);
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -71,7 +71,7 @@ function Messages({ selectedUser }) {
     };
 
     getMessages();
-  }, [SERVER_URL]);
+  }, [SERVER_URL_V]);
 
   useEffect(() => {
     const socket = io(SERVER_URL);
@@ -98,7 +98,7 @@ function Messages({ selectedUser }) {
     return () => {
       socket.disconnect();
     };
-  }, [SERVER_URL]);
+  }, [SERVER_URL_V]);
 
   const addEmoji = (e) => {
     const sym = e.unified.split("-");
@@ -124,7 +124,7 @@ function Messages({ selectedUser }) {
         toimg: selectedUser.urlimage,
         message: messageInput,
       };
-      const response = await axios.post(`${SERVER_URL}/messages`, data);
+      const response = await axios.post(`${SERVER_URL_V}/messages`, data);
       socket.emit("sendMessage", response.data);
       toast({ description: "Your message has been sent." });
       setMessageInput("");
@@ -142,7 +142,7 @@ function Messages({ selectedUser }) {
       if (!window.confirm("Are you sure you want to delete this message?")) {
         return;
       }
-      await axios.delete(`${SERVER_URL}/messages/${idMsg}`);
+      await axios.delete(`${SERVER_URL_V}/messages/${idMsg}`);
       socket.emit("deleteMessage", idMsg);
       setputdelete(true);
       setEmoji(true);
@@ -170,7 +170,7 @@ function Messages({ selectedUser }) {
         updated: "edited",
       };
       const response = await axios.put(
-        `${SERVER_URL}/messages/${idMsg}`,
+        `${SERVER_URL_V}/messages/${idMsg}`,
         updatedMessage
       );
       socket.emit("updateMessage", response.data);

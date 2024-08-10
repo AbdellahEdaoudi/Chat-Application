@@ -16,7 +16,7 @@ function UserList({selectedUser,setSelectedUser}) {
   const messagesEndRef = useRef(null);
   const lodd = Array.from({ length: 10 }, (_, index) => index + 1);
   const userEmail = user?.emailAddresses[0]?.emailAddress;
-  const {SERVER_URL,userDetails} = useContext(MyContext);
+  const {SERVER_URL_V,userDetails} = useContext(MyContext);
 
   
   //  search input change
@@ -41,7 +41,7 @@ function UserList({selectedUser,setSelectedUser}) {
   useEffect(() => {
     const getUserByEmail = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL}/usersE/${userEmail}`);
+        const response = await axios.get(`${SERVER_URL_V}/usersE/${userEmail}`);
         setuserByEmail(response.data);
       } catch (error) {
         console.log(error);
@@ -50,20 +50,20 @@ function UserList({selectedUser,setSelectedUser}) {
     if (userEmail) {
       getUserByEmail();
     }
-  }, [SERVER_URL,userEmail]);
+  }, [SERVER_URL_V,userEmail]);
 
   // Get Messages
   useEffect(() => {
     const GetMessages = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`);
         setMessages(response.data);
       } catch (error) {
         console.error('Error fetching messages:', error);
       }
     };
     GetMessages();
-  },[SERVER_URL]);
+  },[SERVER_URL_V]);
   
   
   return (

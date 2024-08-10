@@ -27,7 +27,7 @@ function UserListMobile({ selectedUser, setSelectedUser}) {
   const messagesEndRef = useRef(null);
   const lodd = Array.from({ length: 20 }, (_, index) => index + 1);
   const userEmail = user?.emailAddresses[0]?.emailAddress;
-  const {SERVER_URL,userDetails} = useContext(MyContext);
+  const {SERVER_URL_V,userDetails} = useContext(MyContext);
   const router = useRouter()
 
   //  search input change
@@ -52,14 +52,14 @@ function UserListMobile({ selectedUser, setSelectedUser}) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`);
         setMessages(response.data);
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
     };
     fetchData();
-  }, [SERVER_URL]);
+  }, [SERVER_URL_V]);
 
   return (
     <div>

@@ -32,7 +32,7 @@ function UserProfile({ params }) {
   const [idMsg, setIdMsg] = useState("");
   const messagesEndRef = useRef(null);
   const lod = Array.from({ length: 10 }, (_, index) => index + 1);
-  const {SERVER_URL,userDetails,EmailUser} = useContext(MyContext);
+  const {SERVER_URL_V,SERVER_URL,userDetails,EmailUser} = useContext(MyContext);
   const filtUser = userDetails.find((fl)=>fl.email === EmailUser)
   const router = useRouter();
 
@@ -68,7 +68,7 @@ function UserProfile({ params }) {
     return () => {
       socket.disconnect();
     };
-  }, [SERVER_URL]); 
+  }, [SERVER_URL_V]); 
 
   const addEmoji = (e) => {
     const sym = e.unified.split("-");
@@ -85,7 +85,7 @@ function UserProfile({ params }) {
   useEffect(() => {
     const getMessages = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`);
         setMessages(response.data);
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -106,7 +106,7 @@ function UserProfile({ params }) {
         toimg: userDname.urlimage,
         message: messageInput,
       };
-      const response = await axios.post(`${SERVER_URL}/messages`, data);
+      const response = await axios.post(`${SERVER_URL_V}/messages`, data);
       socket.emit("sendMessage", response.data);
       toast({ description: "Your message has been sent." });
       setMessageInput("");
@@ -124,7 +124,7 @@ function UserProfile({ params }) {
       if (!window.confirm("Are you sure you want to delete this message?")) {
         return;
       }
-      await axios.delete(`${SERVER_URL}/messages/${idMsg}`);
+      await axios.delete(`${SERVER_URL_V}/messages/${idMsg}`);
       socket.emit("deleteMessage", idMsg);
       setputdelete(true);
       setEmoji(true);
@@ -152,7 +152,7 @@ function UserProfile({ params }) {
         updated: "edited",
       };
       const response = await axios.put(
-        `${SERVER_URL}/messages/${idMsg}`,
+        `${SERVER_URL_V}/messages/${idMsg}`,
         updatedMessage
       );
       socket.emit("updateMessage", response.data);
@@ -173,7 +173,7 @@ function UserProfile({ params }) {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL}/user/${params.username}`);
+        const response = await axios.get(`${SERVER_URL_V}/user/${params.username}`);
         if (!response.data) {
           throw new Error("User not found");
         }
@@ -183,7 +183,7 @@ function UserProfile({ params }) {
       }
     };
  fetchUserDetails();
-  },[SERVER_URL,params.id,params.username]);
+  },[SERVER_URL_V,params.id,params.username]);
   
   return (
     <div className="">
