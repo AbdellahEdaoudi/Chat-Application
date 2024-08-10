@@ -20,7 +20,7 @@ export const MyProvider = ({ children }) => {
   const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL;
   const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
   const SERVER_URL_V = process.env.NEXT_PUBLIC_SERVER_URL_V;
-  
+
 
   // Initialize Socket.io
   const socket = io(SERVER_URL, {
@@ -70,7 +70,7 @@ export const MyProvider = ({ children }) => {
         console.error("Error fetching user details:", error);
       });
   }, [SERVER_URL_V]);
-    
+
   useEffect(() => {
     const getMessages = async () => {
       try {
@@ -121,7 +121,7 @@ export const MyProvider = ({ children }) => {
         messages,
       }}
     >
-      <audio ref={audioRef} src="/notification2.mp3" preload="auto" />
+      <audio ref={audioRef} src="/notification3.mp3" preload="auto" />
       {children}
     </MyContext.Provider>
   );
