@@ -341,10 +341,12 @@ function Messages({ selectedUser }) {
                               : "flex items-center  gap-2"
                           }`}
                         >
-                          {/* Logo */}
-                          <div  
+                          
+                          <AlertDialog>
+  <AlertDialogTrigger>
+  {/* Logo */}
+  <div  
                             className="flex-shrink-0"
-                            onClick={()=>router.push(`/`)}
                           >
                             <Image alt="Logo"
                               src={msg.fromimg}
@@ -352,6 +354,34 @@ function Messages({ selectedUser }) {
                               className=" hover:scale-105 cursor-pointer  duration-300 rounded-full"
                             />
                           </div>
+  </AlertDialogTrigger>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      {/* <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle> */}
+      <AlertDialogDescription>
+  <div className="flex flex-col items-center bg-gray-100 p-4 rounded-lg shadow-lg">
+    <div className="flex justify-center">
+      <Image
+        width={150}  // حجم أقل لملاءمة التصميم
+        height={150}
+        src={msg.fromimg}
+        alt="Profile Image"
+        className="rounded-full border-4 border-green-500"
+      />
+    </div>
+    <div className="flex justify-center text-3xl font-semibold py-3 text-gray-800">
+      {msg.fromname}
+    </div>
+  </div>
+</AlertDialogDescription>
+
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      {/* <AlertDialogAction>Continue</AlertDialogAction> */}
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
                           {/* Msg */}
                           <div
                             className={`whitespace-pre-wrap break-all  ${
