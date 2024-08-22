@@ -277,30 +277,16 @@ function Messages({ selectedUser }) {
             ref={messagesEndRef}
           >
             {messages.length === 0 ? (
-              <div className="flex justify-around">
-                <div className="space-y-3">
-                  {lod.map((l, i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[250px]" />
-                        <Skeleton className="h-4 w-[200px]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-3">
-                  {lod.map((l, i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[250px]" />
-                        <Skeleton className="h-4 w-[200px]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex items-center justify-center h-64   rounded-lg">
+              <div className="text-center p-4">
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                  No Messages
+                </h2>
+                <p className="text-gray-500">
+                  You don't have any messages yet.
+                </p>
               </div>
+            </div>
             ) : (
               FilterMessages
                 .map((msg, i) => {
@@ -362,7 +348,7 @@ function Messages({ selectedUser }) {
   <div className="flex flex-col items-center bg-gray-100 p-4 rounded-lg shadow-lg">
     <div className="flex justify-center">
       <Image
-        width={150}  // حجم أقل لملاءمة التصميم
+        width={150}
         height={150}
         src={msg.fromimg}
         alt="Profile Image"
