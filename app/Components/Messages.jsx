@@ -98,7 +98,7 @@ function Messages({ selectedUser }) {
     return () => {
       socket.disconnect();
     };
-  }, [SERVER_URL_V]);
+  }, [SERVER_URL]);
 
   const addEmoji = (e) => {
     const sym = e.unified.split("-");

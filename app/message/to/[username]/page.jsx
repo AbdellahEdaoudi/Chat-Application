@@ -68,7 +68,7 @@ function UserProfile({ params }) {
     return () => {
       socket.disconnect();
     };
-  }, [SERVER_URL_V]); 
+  }, [SERVER_URL]); 
 
   const addEmoji = (e) => {
     const sym = e.unified.split("-");
@@ -93,7 +93,7 @@ function UserProfile({ params }) {
     };
 
     getMessages();
-  }, [SERVER_URL]);
+  }, [SERVER_URL_V]);
 
   const sendMessage = async () => {
     setLoading(true);
