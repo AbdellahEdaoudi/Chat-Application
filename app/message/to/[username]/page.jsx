@@ -105,6 +105,7 @@ function UserProfile({ params }) {
         to: userDname.email,
         toimg: userDname.urlimage,
         message: messageInput,
+        readorno : false
       };
       const response = await axios.post(`${SERVER_URL_V}/messages`, data);
       socket.emit("sendMessage", response.data);

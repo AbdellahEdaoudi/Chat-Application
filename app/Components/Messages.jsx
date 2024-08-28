@@ -123,6 +123,7 @@ function Messages({ selectedUser }) {
         to: selectedUser.email,
         toimg: selectedUser.urlimage,
         message: messageInput,
+        readorno : false
       };
       const response = await axios.post(`${SERVER_URL_V}/messages`, data);
       socket.emit("sendMessage", response.data);
