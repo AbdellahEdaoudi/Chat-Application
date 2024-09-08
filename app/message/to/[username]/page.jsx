@@ -85,7 +85,11 @@ function UserProfile({ params }) {
   useEffect(() => {
     const getMessages = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL_V}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        });
         setMessages(response.data);
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -107,7 +111,11 @@ function UserProfile({ params }) {
         message: messageInput,
         readorno : false
       };
-      const response = await axios.post(`${SERVER_URL_V}/messages`, data);
+      const response = await axios.post(`${SERVER_URL_V}/messages`, data, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+        }
+      });
       socket.emit("sendMessage", response.data);
       toast({ description: "Your message has been sent." });
       setMessageInput("");
@@ -125,7 +133,11 @@ function UserProfile({ params }) {
       if (!window.confirm("Are you sure you want to delete this message?")) {
         return;
       }
-      await axios.delete(`${SERVER_URL_V}/messages/${idMsg}`);
+      await axios.delete(`${SERVER_URL_V}/messages/${idMsg}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+        }
+      });
       socket.emit("deleteMessage", idMsg);
       setputdelete(true);
       setEmoji(true);
@@ -154,7 +166,11 @@ function UserProfile({ params }) {
       };
       const response = await axios.put(
         `${SERVER_URL_V}/messages/${idMsg}`,
-        updatedMessage
+        updatedMessage, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        }
       );
       socket.emit("updateMessage", response.data);
       setputdelete(true);
@@ -174,7 +190,11 @@ function UserProfile({ params }) {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL_V}/user/${params.username}`);
+        const response = await axios.get(`${SERVER_URL_V}/user/${params.username}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        });
         if (!response.data) {
           throw new Error("User not found");
         }

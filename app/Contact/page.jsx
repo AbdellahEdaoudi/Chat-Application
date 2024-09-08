@@ -27,7 +27,11 @@ const ContactForm = () => {
     setLoading(true);
     try {
       console.log('Data Send:', { iduser ,email, phoneNumber, message });
-      await axios.post(`${SERVER_URL_V}/contacts`, {iduser, email, phoneNumber, message });
+      await axios.post(`${SERVER_URL_V}/contacts`, {iduser, email, phoneNumber, message }, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+        }
+      });
       alert('Contact added successfully!');
       setMessage('');
     } catch (error) {

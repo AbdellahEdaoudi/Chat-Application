@@ -52,7 +52,11 @@ function UserListMobile({ selectedUser, setSelectedUser}) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL_V}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        });
         setMessages(response.data);
       } catch (error) {
         console.error("Error fetching messages:", error);

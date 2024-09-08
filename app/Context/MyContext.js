@@ -62,7 +62,11 @@ export const MyProvider = ({ children }) => {
   // Fetch initial data
   useEffect(() => {
     axios
-      .get(`${SERVER_URL_V}/users`)
+      .get(`${SERVER_URL_V}/users`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+        }
+      })
       .then((res) => {
         setUserDetails(res.data);
       })
@@ -74,7 +78,11 @@ export const MyProvider = ({ children }) => {
   useEffect(() => {
     const getMessages = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL_V}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        });
         setMessages(response.data.reverse());
       } catch (error) {
         console.error("Error fetching messages:", error);
@@ -86,7 +94,11 @@ export const MyProvider = ({ children }) => {
   // links
   useEffect(() => {
     axios
-      .get(`${SERVER_URL_V}/links`)
+      .get(`${SERVER_URL_V}/links`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+        }
+      })
       .then((res) => {
         setUserLinks(res.data);
       })

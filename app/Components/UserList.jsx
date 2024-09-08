@@ -41,7 +41,11 @@ function UserList({selectedUser,setSelectedUser}) {
   useEffect(() => {
     const getUserByEmail = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL_V}/usersE/${userEmail}`);
+        const response = await axios.get(`${SERVER_URL_V}/usersE/${userEmail}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        });
         setuserByEmail(response.data);
       } catch (error) {
         console.log(error);
@@ -56,7 +60,11 @@ function UserList({selectedUser,setSelectedUser}) {
   useEffect(() => {
     const GetMessages = async () => {
       try {
-        const response = await axios.get(`${SERVER_URL_V}/messages`);
+        const response = await axios.get(`${SERVER_URL_V}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TOKEN}` // Include the token in the Authorization header
+          }
+        });
         setMessages(response.data);
       } catch (error) {
         console.error('Error fetching messages:', error);
