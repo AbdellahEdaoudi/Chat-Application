@@ -16,9 +16,9 @@ export const MyProvider = ({ children }) => {
   // const CLIENT_URL = "http://localhost:3000";
   // const SERVER_URL = "http://localhost:2222" ;
   // const SERVER_URL_V = "http://localhost:2222" ;
-  const CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL;
-  const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-  const SERVER_URL_V = process.env.NEXT_PUBLIC_SERVER_URL_V;
+  const CLIENT_URL = "https://edchatflow.vercel.app"
+  const SERVER_URL = "https://server-chat-application-qpge.onrender.com";
+  const SERVER_URL_V = "https://chat-application-server-url.vercel.app";
 
 
   // Initialize Socket.io
