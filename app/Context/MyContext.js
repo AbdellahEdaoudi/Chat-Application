@@ -17,7 +17,7 @@ export const MyProvider = ({ children }) => {
   // const SERVER_URL = "http://localhost:2222" ;
   // const SERVER_URL_V = "http://localhost:2222" ;
   const CLIENT_URL = "https://edchatflow.vercel.app"
-  const SERVER_URL = "https://server-chat-application-qpge.onrender.com";
+  const SERVER_URL = "https://server-chat-application-s55v.onrender.com";
   const SERVER_URL_V = "https://chat-application-server-url.vercel.app";
 
 
