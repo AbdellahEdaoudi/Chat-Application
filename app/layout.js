@@ -14,7 +14,6 @@ export const metadata = {
   keywords: "ChatApp, communication platform, language translation, messaging app, social media integration, chat application, online communication, real-time messaging, multilingual chat",
   author: "Abdellah Edaoudi",
   robots: "index, follow", 
-  viewport: "width=device-width, initial-scale=1.0",
 };
 
 
