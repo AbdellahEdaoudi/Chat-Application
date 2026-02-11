@@ -9,6 +9,7 @@ import Header from "@/app/Components/Header";
 
 import Image from "next/image";
 import { generateKeyPair, encryptPrivateKey } from "@/app/utils/encryption";
+import { Spinner } from "@/app/Components/lucide-react/lucide-react";
 
 const EyeIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
@@ -210,13 +211,13 @@ const RegisterPage = () => {
                             </div>
                             <button
                                 type="submit"
-                                className={`w-full py-3 rounded-lg transition duration-300 font-bold shadow-md ${isPasswordValid && !loading
+                                className={`w-full py-3 rounded-lg transition duration-300 font-bold shadow-md flex items-center justify-center gap-2 min-h-[48px] ${isPasswordValid && !loading
                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
                                     }`}
                                 disabled={!isPasswordValid || loading}
                             >
-                                {loading ? "Registering..." : "Create Secure Account"}
+                                {loading ? <Spinner className="w-5 h-5" /> : "Create Secure Account"}
                             </button>
                         </form>
                         <div className="mt-4 text-center text-sm">

@@ -10,38 +10,7 @@ import { encryptMessage, decryptMessage } from "../utils/encryption";
 import Linkify from "linkify-react";
 import { MyContext } from "../Context/MyContext";
 import { useToast } from "./toast";
-
-const ExpandableText = ({ content, isMe }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [canExpand, setCanExpand] = useState(false);
-  const contentRef = useRef(null);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setCanExpand(contentRef.current.scrollHeight > contentRef.current.clientHeight);
-    }
-  }, [content]);
-
-  return (
-    <>
-      <div
-        ref={contentRef}
-        className={`${!isExpanded ? "line-clamp-4" : ""} whitespace-pre-wrap break-all`}
-      >
-        <Linkify>{content}</Linkify>
-      </div>
-      {canExpand && (
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`text-[10px] font-bold mt-1 hover:underline transition-all ${isMe ? "text-sky-900" : "text-green-900"
-            }`}
-        >
-          {isExpanded ? "Show Less" : "Read More..."}
-        </button>
-      )}
-    </>
-  );
-};
+import { Spinner } from "./lucide-react/lucide-react";
 
 function Messages() {
   const toast = useToast();
@@ -494,7 +463,9 @@ function Messages() {
                           className={`p-2 rounded-md md:text-base text-xs max-w-[75%] md:max-w-[70%] ${msg.from?.email === email ? "bg-sky-400" : "bg-green-400"
                             }`}
                         >
-                          <ExpandableText content={msg.message} isMe={msg.from?.email === email} />
+                          <div className="whitespace-pre-wrap break-words">
+                            <Linkify>{msg.message}</Linkify>
+                          </div>
                         </div>
 
                         {/* Icon 3 point */}
@@ -550,9 +521,9 @@ function Messages() {
                     setEmoji(emoji);
                   }}
                   disabled={loading || messageInput === ""}
-                  className="bg-indigo-600  text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
+                  className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition duration-300 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[100px]"
                 >
-                  {loading ? <i className="fa fa-spinner fa-spin"></i> : "Send"}
+                  {loading ? <Spinner /> : "Send"}
                 </button>
                 <div
                   onClick={() => {
@@ -576,14 +547,6 @@ function Messages() {
                   type="text"
                   placeholder="Enter your message here..."
                   value={umessage}
-                  // onChange={(e) => {
-                  //   const words = e.target.value
-                  //     .split(/\s+/)
-                  //     .filter((word) => word.length > 0);
-                  //   if (words.length <= 200) {
-                  //     setUMessage(e.target.value)
-                  //   }
-                  // }}
                   onChange={(e) => {
                     setUMessage(e.target.value);
                   }}
@@ -591,15 +554,10 @@ function Messages() {
                 />
                 <button
                   onClick={updateMsg}
-                  className="bg-green-600 p-2 rounded-md  text-white hover:bg-green-600 hover:scale-105 duration-500"
+                  disabled={loadingu}
+                  className="bg-emerald-600 px-6 py-3 rounded-lg text-white hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[100px]"
                 >
-                  <>
-                    {loadingu ? (
-                      <i className="fa fa-spinner fa-spin"></i>
-                    ) : (
-                      "Update"
-                    )}
-                  </>
+                  {loadingu ? <Spinner /> : "Update"}
                 </button>
                 <button
                   className="bg-red-600 p-2 rounded-md text-white hover:bg-red-600 hover:scale-105 duration-500"
@@ -640,10 +598,9 @@ function Messages() {
               <button
                 onClick={deleteMsg}
                 disabled={loadingd}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition flex items-center gap-2"
+                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2 font-bold shadow-md shadow-red-200 min-w-[100px]"
               >
-                {loadingd && <i className="fa fa-spinner fa-spin"></i>}
-                <span>Delete</span>
+                {loadingd ? <Spinner /> : "Delete"}
               </button>
             </div>
           </div>
@@ -666,10 +623,9 @@ function Messages() {
               <button
                 onClick={clearChat}
                 disabled={loadingClear}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition flex items-center gap-2"
+                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2 font-bold shadow-md shadow-red-200 min-w-[140px]"
               >
-                {loadingClear && <i className="fa fa-spinner fa-spin"></i>}
-                <span>Clear Chat</span>
+                {loadingClear ? <Spinner /> : "Clear Chat"}
               </button>
             </div>
           </div>
