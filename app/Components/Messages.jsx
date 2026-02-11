@@ -84,6 +84,11 @@ function Messages() {
         setActiveMessageMenu(null);
       }
 
+      // Close Header Menu
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+
       // Close Emoji Picker
       if (emojiRef.current && !emojiRef.current.contains(event.target) && !event.target.closest('.emoji-toggle')) {
         setEmoji(true);
@@ -460,7 +465,7 @@ function Messages() {
                             {/* Menu Container */}
                             <div className={`
                               fixed inset-x-0 bottom-0 z-50 p-3 bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300
-                              md:absolute md:inset-auto md:top-full md:mt-1 ${msg.from?.email === email ? "md:right-0" : "md:left-0"} 
+                              md:absolute md:inset-auto md:-top-10 ${msg.from?.email === email ? "md:right-full md:mr-2" : "md:left-full md:ml-2"} 
                               md:bg-white md:border md:border-gray-100 md:shadow-xl md:rounded-xl md:p-1.5 md:z-30 md:min-w-[150px] md:animate-in md:fade-in md:zoom-in-95 md:duration-100
                             `}>
                               {/* Mobile Handle Bar */}
@@ -547,8 +552,11 @@ function Messages() {
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (messageInput.trim() && !loading) sendMessage();
+                      // Only send on Enter if on Desktop (width > 768px)
+                      if (window.innerWidth > 768) {
+                        e.preventDefault();
+                        if (messageInput.trim() && !loading) sendMessage();
+                      }
                     }
                   }}
                   className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all resize-none max-h-32 sleek-scrollbar text-sm md:text-base text-gray-800 caret-indigo-600 shadow-sm placeholder:text-gray-400"
@@ -697,23 +705,34 @@ function Messages() {
       )}
 
       {showClearModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h3 className="text-lg font-bold mb-4">Clear Chat</h3>
-            <p className="mb-6 text-gray-600">Are you sure you want to delete all messages with this user? This action cannot be undone.</p>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200"
+          onClick={() => setShowClearModal(false)}
+        >
+          <div
+            className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4 text-red-600">
+              <div className="p-2 bg-red-50 rounded-full">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-xl font-bold">Clear Chat?</h3>
+            </div>
+            <p className="mb-6 text-gray-600 leading-relaxed">Are you sure you want to delete all messages with this user? This action cannot be undone.</p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowClearModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
+                className="px-5 py-2.5 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={clearChat}
                 disabled={loadingClear}
-                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2 font-bold shadow-md shadow-red-200 min-w-[140px]"
+                className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[140px] shadow-lg shadow-red-200"
               >
-                {loadingClear ? <Spinner /> : "Clear Chat"}
+                {loadingClear ? <Spinner className="w-5 h-5 text-white" /> : "Clear Conversation"}
               </button>
             </div>
           </div>
