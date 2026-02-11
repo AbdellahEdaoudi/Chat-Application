@@ -7,7 +7,7 @@ import { useToast } from "@/app/Components/toast";
 import Header from "@/app/Components/Header";
 import { Repeat, ImagePlus } from "@/app/Components/lucide-react/lucide-react";
 import { encryptPrivateKey } from "@/app/utils/encryption";
-import { EyeIcon, EyeOffIcon } from "./lucide-react/lucide-react";
+import { EyeIcon, EyeOffIcon } from "../Components/lucide-react/lucide-react";
 
 
 const ProfilePage = () => {
