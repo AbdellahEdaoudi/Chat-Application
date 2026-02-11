@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 50">
+  <defs>
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Icon: Abstract Chat/Book Flow -->
+  <g transform="translate(10, 5)">
+    <!-- Main bubble shape -->
+    <path d="M20 0C8.954 0 0 8.059 0 18c0 9.941 8.954 18 20 18c2.4 0 4.693-.39 6.837-1.106L34 40l-3.645-6.76C32.185 30.266 34 26.697 34 22.825" fill="url(#mainGradient)" opacity="0.1"/>
+    <path d="M20 4C10.7 4 4 10.5 4 18.5S10.7 33 20 33c2.3 0 4.4-.5 6.3-1.4l5.7 3.4-2.2-5.1C32.3 27.8 34 24.8 34 21.5" fill="none" stroke="url(#mainGradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Flow/Education wave line inside -->
+    <path d="M12 18c2-3 6-3 8 0s6 3 8 0" stroke="url(#mainGradient)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Text -->
+  <text x="60" y="35" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="700" font-size="28" letter-spacing="-0.5" fill="#1F2937">
+    EdChat<tspan fill="url(#mainGradient)">Flow</tspan>
+  </text>
+</svg>
