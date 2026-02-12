@@ -58,7 +58,7 @@ function Messages() {
       (fromId === myId && toId === selectedId) ||
       (fromId === selectedId && toId === myId)
     );
-  });
+  }).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
   // Scroll logic
   useEffect(() => {
@@ -468,7 +468,7 @@ function Messages() {
 
             <AnimatePresence initial={false}>
               {FilterMessages.length === 0 ? (
-                <div className="flex items-center justify-center h-full rounded-lg">
+                <div key="no-messages-container" className="flex items-center justify-center h-full rounded-lg">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -483,23 +483,35 @@ function Messages() {
                   </motion.div>
                 </div>
               ) : (
-                FilterMessages.map((msg, i) => {
+                FilterMessages.reduce((acc, msg, i) => {
                   const DateMsg = new Date(msg.createdAt);
                   const now = new Date();
                   const yesterday = new Date();
                   yesterday.setDate(now.getDate() - 1);
                   const isToday = DateMsg.toDateString() === now.toDateString();
                   const isYesterday = DateMsg.toDateString() === yesterday.toDateString();
-                  const dateLabel = isToday ? "Today," : isYesterday ? "Yesterday," : DateMsg.toLocaleDateString();
 
-                  return (
+                  const prevMsg = i > 0 ? FilterMessages[i - 1] : null;
+                  const showDivider = !prevMsg || new Date(prevMsg.createdAt).toDateString() !== DateMsg.toDateString();
+
+                  if (showDivider) {
+                    const dividerLabel = isToday ? "Today" : isYesterday ? "Yesterday" : DateMsg.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+                    acc.push(
+                      <motion.div
+                        key={`divider-${DateMsg.toDateString()}`}
+                        className="flex justify-center mb-3"
+                      >
+                        <span className="bg-gray-100/80 backdrop-blur-sm text-gray-500 text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm border border-gray-200">
+                          {dividerLabel}
+                        </span>
+                      </motion.div>
+                    );
+                  }
+
+                  acc.push(
                     <motion.div
-                      key={msg._id || i}
+                      key={msg._id || `msg-${i}`}
                       id={msg._id}
-                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
                       className="mb-4"
                     >
                       <div className={`${msg.from?.email === email ? "flex items-start flex-row-reverse gap-2" : "flex items-start gap-2"}`}>
@@ -512,7 +524,7 @@ function Messages() {
                           />
                         </div>
 
-                        <div className={`p-3 md:p-4 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed ${msg.from?.email === email
+                        <div className={`p-2 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed ${msg.from?.email === email
                           ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl rounded-tr-none"
                           : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 rounded-2xl rounded-tl-none border border-gray-200"
                           }`}>
@@ -539,10 +551,10 @@ function Messages() {
 
                               {/* Menu Container */}
                               <div className={`
-                              fixed inset-x-0 bottom-0 z-50 p-3 bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300
-                              md:absolute md:inset-auto md:-top-10 ${msg.from?.email === email ? "md:right-full md:mr-2" : "md:left-full md:ml-2"} 
-                              md:bg-white md:border md:border-gray-100 md:shadow-xl md:rounded-xl md:p-1.5 md:z-30 md:min-w-[150px] md:animate-in md:fade-in md:zoom-in-95 md:duration-100
-                            `}>
+                                fixed inset-x-0 bottom-0 z-50 p-3 bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300
+                                md:absolute md:inset-auto md:-top-10 ${msg.from?.email === email ? "md:right-full md:mr-2" : "md:left-full md:ml-2"} 
+                                md:bg-white md:border md:border-gray-100 md:shadow-xl md:rounded-xl md:p-1.5 md:z-30 md:min-w-[150px] md:animate-in md:fade-in md:zoom-in-95 md:duration-100
+                              `}>
                                 {/* Mobile Handle Bar */}
                                 <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3 md:hidden" />
 
@@ -599,16 +611,17 @@ function Messages() {
                           {msg.updated && "Edited"}
                         </span>
                         <div className="flex gap-2 text-[11px] text-gray-500">
-                          <p>{dateLabel}</p>
                           <p>{DateMsg.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                       </div>
                     </motion.div>
                   );
-                })
+                  return acc;
+                }, [])
               )}
               {isTyping === selectedUser?._id && (
                 <motion.div
+                  key="typing-indicator"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
