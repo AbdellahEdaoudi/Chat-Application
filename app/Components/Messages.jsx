@@ -757,23 +757,16 @@ function Messages() {
             </div>
             <div className="px-6 pb-8 relative">
               <div className="relative flex justify-center -mt-16 mb-4">
-                <div className="p-1.5  bg-white rounded-full shadow-lg">
-                  <Image
-                    src={selectedUser.profileImage || "/default-avatar.png"}
-                    alt={selectedUser.fullname}
-                    width={128}
-                    height={128}
-                    className="absolute rounded-full object-cover w-32 h-32 border-4 border-indigo-50"
-                    style={{ height: "auto" }}
-                  />
-                  <Image
-                    src={"/default-avatar.png"}
-                    alt={selectedUser.fullname}
-                    width={128}
-                    height={128}
-                    className="rounded-full object-cover w-32 h-32 border-4 border-indigo-50"
-                    style={{ height: "auto" }}
-                  />
+                <div className="p-1.5 bg-white rounded-full shadow-lg overflow-hidden">
+                  <div className="relative w-32 h-32">
+                    <Image
+                      src={selectedUser.profileImage || "/default-avatar.png"}
+                      alt={selectedUser.fullname}
+                      fill
+                      sizes="128px"
+                      className="rounded-full object-cover border-4 border-indigo-50"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="text-center space-y-1 mb-8">
