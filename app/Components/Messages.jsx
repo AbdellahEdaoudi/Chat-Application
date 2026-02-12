@@ -3,8 +3,7 @@ import axios from "axios";
 import Image from "next/image";
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { BsEmojiSmile, BsChatSquareDots } from "react-icons/bs";
-import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
+import EmojiPicker from "emoji-picker-react";
 import { EllipsisVertical, Mail, Phone, CircleX, Send, Copy, Edit, Trash2 } from "@/app/Components/lucide-react/lucide-react";
 import { encryptMessage, decryptMessage } from "../utils/encryption";
 import Linkify from "linkify-react";
@@ -282,10 +281,8 @@ function Messages() {
     }
   };
   // add emoji
-  const addEmoji = (e) => {
-    const sym = e.unified.split("-");
-    const codeArray = sym.map(el => "0x" + el);
-    const emojiStr = String.fromCodePoint(...codeArray);
+  const addEmoji = (emojiData) => {
+    const emojiStr = emojiData.emoji;
 
     if (!showEditModal) {
       const ref = messageInputRef.current;
@@ -581,12 +578,15 @@ function Messages() {
 
         {!showEditModal && (
           <div ref={emojiRef} className={`absolute bottom-24 right-6 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 ${emoji ? "hidden" : "block"}`}>
-            <Picker
-              data={data}
-              onEmojiSelect={addEmoji}
+            <EmojiPicker
+              onEmojiClick={addEmoji}
               theme="light"
-              previewPosition="none"
-              skinTonePosition="none"
+              lazyLoadEmojis={true}
+              searchDisabled={false}
+              skinTonesDisabled={true}
+              previewConfig={{ showPreview: false }}
+              width={350}
+              height={400}
             />
           </div>
         )}
@@ -662,12 +662,14 @@ function Messages() {
                     <div className={`absolute left-full top-1/2 -translate-y-1/2 ml-12 z-50 hidden lg:block transition-all duration-300 ease-out origin-left
                       ${emoji ? "opacity-0 scale-95 translate-x-4 pointer-events-none" : "opacity-100 scale-100 translate-x-0 pointer-events-auto"}`}>
                       <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                        <Picker
-                          data={data}
-                          onEmojiSelect={addEmoji}
+                        <EmojiPicker
+                          onEmojiClick={addEmoji}
                           theme="light"
-                          previewPosition="none"
-                          skinTonePosition="none"
+                          lazyLoadEmojis={true}
+                          previewConfig={{ showPreview: false }}
+                          skinTonesDisabled={true}
+                          width={350}
+                          height={400}
                         />
                       </div>
                     </div>
@@ -675,13 +677,14 @@ function Messages() {
                     <div className={`absolute top-full left-1/2 -translate-x-[85%] mt-2 z-50 lg:hidden transition-all duration-300 ease-out origin-top-right
                       ${emoji ? "opacity-0 scale-75 -translate-y-4 pointer-events-none" : "opacity-100 scale-[0.8] translate-y-0 pointer-events-auto"}`}>
                       <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                        <Picker
-                          data={data}
-                          onEmojiSelect={addEmoji}
+                        <EmojiPicker
+                          onEmojiClick={addEmoji}
                           theme="light"
-                          previewPosition="none"
-                          skinTonePosition="none"
-                          perLine={7}
+                          lazyLoadEmojis={true}
+                          previewConfig={{ showPreview: false }}
+                          skinTonesDisabled={true}
+                          width={300}
+                          height={350}
                         />
                       </div>
                     </div>
