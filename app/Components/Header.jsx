@@ -30,7 +30,7 @@ function Header() {
                 width={180}
                 height={40}
                 priority
-                style={{ width: '180px', height: 'auto' }}
+                className="w-[180px] h-auto"
               />
             </Link>
 
