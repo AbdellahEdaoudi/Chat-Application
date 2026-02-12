@@ -129,6 +129,13 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   body {
     @apply bg-background text-foreground;
   }
+
+  body,
+  input,
+  textarea,
+  button {
+    font-family: "Twemoji Country Flags", "Prompt", sans-serif !important;
+  }
 }
 
 .square {

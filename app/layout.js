@@ -2,6 +2,7 @@ import { Inter, Prompt } from "next/font/google";
 import "./globals.css";
 import { MyProvider } from "./Context/MyContext";
 import { ToastProvider } from "./Components/toast";
+import EmojiPolyfill from "./Components/EmojiPolyfill";
 
 const inter = Inter({ subsets: ['latin'] });
 const prompt = Prompt({ subsets: ['latin'], weight: '400' });
@@ -85,6 +86,7 @@ export default function RootLayout({ children }) {
             }),
           }}
         />
+        <EmojiPolyfill />
         <ToastProvider>
           <MyProvider>
             {children}

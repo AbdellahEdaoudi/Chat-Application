@@ -11,6 +11,8 @@ import { MyContext } from "../Context/MyContext";
 import { useToast } from "./toast";
 import { Spinner } from "./lucide-react/lucide-react";
 
+
+
 function Messages() {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -581,6 +583,7 @@ function Messages() {
             <EmojiPicker
               onEmojiClick={addEmoji}
               theme="light"
+              emojiStyle="apple"
               lazyLoadEmojis={true}
               searchDisabled={false}
               skinTonesDisabled={true}
@@ -665,6 +668,7 @@ function Messages() {
                         <EmojiPicker
                           onEmojiClick={addEmoji}
                           theme="light"
+                          emojiStyle="apple"
                           lazyLoadEmojis={true}
                           previewConfig={{ showPreview: false }}
                           skinTonesDisabled={true}
@@ -680,6 +684,7 @@ function Messages() {
                         <EmojiPicker
                           onEmojiClick={addEmoji}
                           theme="light"
+                          emojiStyle="apple"
                           lazyLoadEmojis={true}
                           previewConfig={{ showPreview: false }}
                           skinTonesDisabled={true}
