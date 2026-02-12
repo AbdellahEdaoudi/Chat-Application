@@ -29,6 +29,8 @@ function Header() {
                 alt="EdChatFlow"
                 width={180}
                 height={40}
+                priority
+                style={{ width: 'auto', height: 'auto' }}
               />
             </Link>
 
@@ -48,9 +50,9 @@ function Header() {
                       <Image
                         src={userDetails.profileImage || "/default-avatar.png"}
                         alt="Profile"
-                        width={40}
-                        height={40}
-                        className="relative z-10 w-full h-full object-cover"
+                        fill
+                        sizes="40px"
+                        className="relative z-10 object-cover"
                       />
                     </div>
                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full z-20"></span>

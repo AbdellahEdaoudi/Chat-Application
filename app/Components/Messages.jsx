@@ -345,13 +345,13 @@ function Messages() {
                     className="cursor-pointer hover:scale-105 duration-300 flex gap-2 items-center"
                     onClick={() => setShowProfileModal(true)}
                   >
-                    <div className="w-12 h-12 shrink-0 rounded-full overflow-hidden bg-gray-300">
+                    <div className="relative w-12 h-12 shrink-0 rounded-full overflow-hidden bg-gray-300">
                       <Image
-                        width={48}
-                        height={48}
+                        fill
+                        sizes="48px"
                         src={selectedUser.profileImage || "/default-avatar.png"}
                         alt="Profile Image"
-                        className="w-full h-full object-cover"
+                        className="object-cover"
                       />
                     </div>
                     <p className="font-bold">{selectedUser.fullname}</p>
@@ -432,10 +432,11 @@ function Messages() {
                 return (
                   <div key={i} id={msg._id} className="mb-4">
                     <div className={`${msg.from?.email === email ? "flex items-start flex-row-reverse gap-2" : "flex items-start gap-2"}`}>
-                      <div className="flex-shrink-0 mt-1">
+                      <div className="relative w-10 h-10 shrink-0 mt-1">
                         <Image alt="Logo"
                           src={msg.from?.profileImage || "/default-avatar.png"}
-                          width={40} height={40}
+                          fill
+                          sizes="40px"
                           className="hover:scale-105 cursor-pointer duration-300 rounded-full object-cover aspect-square"
                         />
                       </div>
@@ -763,6 +764,7 @@ function Messages() {
                     width={128}
                     height={128}
                     className="absolute rounded-full object-cover w-32 h-32 border-4 border-indigo-50"
+                    style={{ height: "auto" }}
                   />
                   <Image
                     src={"/default-avatar.png"}
@@ -770,6 +772,7 @@ function Messages() {
                     width={128}
                     height={128}
                     className="rounded-full object-cover w-32 h-32 border-4 border-indigo-50"
+                    style={{ height: "auto" }}
                   />
                 </div>
               </div>

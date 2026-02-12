@@ -146,9 +146,9 @@ function UserList() {
                       <Image
                         src={user.profileImage || "/default-avatar.png"}
                         alt="Profile"
-                        layout="fill"
-                        objectFit="cover"
-                        className="relative z-10"
+                        fill
+                        sizes="48px"
+                        className="relative z-10 object-cover"
                       />
                     </div>
                     <div
