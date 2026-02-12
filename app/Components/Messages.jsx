@@ -10,7 +10,7 @@ import Linkify from "linkify-react";
 import { MyContext } from "../Context/MyContext";
 import { useToast } from "./toast";
 import { Spinner } from "./lucide-react/lucide-react";
-
+import { motion, AnimatePresence } from "framer-motion";
 
 
 function Messages() {
@@ -31,51 +31,109 @@ function Messages() {
   const menuRef = useRef(null);
   const emojiRef = useRef(null);
   const skipScrollRef = useRef(false);
+  const scrollRef = useRef(null);
 
   const [idMsg, setIdMsg] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [umessage, setUMessage] = useState("");
   const [emoji, setEmoji] = useState(true);
   const { SERVER_URL_V, selectedUser, messages,
-    setMessages, email, userDetails, logout, setUsers, socket, privateKey } = useContext(MyContext);
+    setMessages, email, userDetails, logout, setUsers, socket, privateKey, isTyping } = useContext(MyContext);
+  const typingTimeoutRef = useRef(null);
+  const lastSelectedUserId = useRef(null);
+
+  const getID = (obj) => {
+    if (!obj) return null;
+    return typeof obj === "object" ? obj._id : obj;
+  };
 
   const FilterMessages = messages.filter((fl) => {
     if (!userDetails || !selectedUser) return false;
+    const fromId = getID(fl.from);
+    const toId = getID(fl.to);
+    const myId = userDetails._id;
+    const selectedId = selectedUser._id;
+
     return (
-      (fl.from?._id === userDetails._id &&
-        fl.to?._id === selectedUser._id) ||
-      (fl.from?._id === selectedUser._id &&
-        fl.to?._id === userDetails._id)
+      (fromId === myId && toId === selectedId) ||
+      (fromId === selectedId && toId === myId)
     );
   });
 
-  // scroll new message
+  // Scroll logic
   useEffect(() => {
+    if (!selectedUser || FilterMessages.length === 0 || !userDetails) return;
+
     if (skipScrollRef.current) {
       skipScrollRef.current = false;
       return;
     }
-    if (FilterMessages.length > 0) {
-      const lastMsg = FilterMessages[FilterMessages.length - 1];
-      // If the last message is from me, scroll to bottom
-      if (lastMsg.from?._id === userDetails?._id) {
-        const el = document.getElementById(lastMsg._id);
-        if (el) el.scrollIntoView({ behavior: "instant" });
-      } else {
-        // Otherwise check for unread messages
-        const firstUnread = FilterMessages.find(
-          (m) => !m.readorno && m.from?._id === selectedUser?._id
-        );
-        if (firstUnread) {
-          const el = document.getElementById(firstUnread._id);
-          if (el) el.scrollIntoView({ behavior: "instant", block: "center" });
+
+    const lastMsg = FilterMessages[FilterMessages.length - 1];
+    const isFirstLoad = lastSelectedUserId.current !== selectedUser._id;
+
+    const performScroll = () => {
+      if (isFirstLoad) {
+        // Logic for selecting a new user
+        const lastMsgFromMe = getID(lastMsg.from) === userDetails._id;
+
+        if (lastMsgFromMe) {
+          // If last message is from me, scroll to absolute bottom
+          if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "instant" });
         } else {
-          const el = document.getElementById(lastMsg._id);
-          if (el) el.scrollIntoView({ behavior: "instant" });
+          // If last message is from them, find first unread
+          const firstUnread = FilterMessages.find(m => !m.readorno && getID(m.from) === selectedUser._id);
+          if (firstUnread) {
+            const el = document.getElementById(firstUnread._id);
+            if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
+          } else {
+            // No unread messages, scroll to bottom
+            if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "instant" });
+          }
         }
+        lastSelectedUserId.current = selectedUser._id;
+      } else {
+        // Logic for new arrival messages while chat is open
+        if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "smooth" });
       }
+    };
+
+    // Use a small timeout to ensure DOM is fully rendered and layout is stable
+    const timer = setTimeout(performScroll, 50);
+    return () => clearTimeout(timer);
+  }, [selectedUser?._id, FilterMessages.length, userDetails?._id]);
+
+  // Mark messages as read logic when chat is active
+  useEffect(() => {
+    if (!selectedUser || !messages.length) return;
+
+    const hasUnread = FilterMessages.some(m => !m.readorno && getID(m.from) === selectedUser._id);
+
+    if (hasUnread) {
+      const markAsReadHandler = async () => {
+        try {
+          await axios.put(`${SERVER_URL_V}/readorno`, { from: selectedUser._id }, { withCredentials: true });
+
+          // Update users unreadCount locally
+          setUsers(prev => prev.map(u =>
+            u._id.toString() === selectedUser._id.toString() ? { ...u, unreadCount: 0 } : u
+          ));
+
+          // Update messages readorno locally
+          setMessages(prev => prev.map(m => {
+            const fromId = getID(m.from);
+            return fromId && fromId.toString() === selectedUser._id.toString() ? { ...m, readorno: true } : m;
+          }));
+        } catch (error) {
+          console.error("Error marking messages as read in component:", error);
+        }
+      };
+
+      // Short delay to ensure scroll happens first
+      const timeout = setTimeout(markAsReadHandler, 500);
+      return () => clearTimeout(timeout);
     }
-  }, [selectedUser, messages, userDetails]);
+  }, [selectedUser?._id, messages.length]);
 
   // handle click outside from emoji and update mode
   useEffect(() => {
@@ -144,6 +202,7 @@ function Messages() {
       toast.success("Sent successfully");
       setMessageInput("");
       setEmoji(true);
+
     } catch (error) {
       console.error("Error sending message:", error);
       if (error.response && (error.response.status === 403 || error.response.status === 401)) {
@@ -407,131 +466,164 @@ function Messages() {
               </div>
             </div>
 
-            {FilterMessages.length === 0 ? (
-              <div className="flex items-center justify-center h-full rounded-lg">
-                <div className="text-center p-4">
-                  <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                    No Messages
-                  </h2>
-                  <p className="text-gray-500">
-                    You don't have any messages yet.
-                  </p>
+            <AnimatePresence initial={false}>
+              {FilterMessages.length === 0 ? (
+                <div className="flex items-center justify-center h-full rounded-lg">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center p-4"
+                  >
+                    <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                      No Messages
+                    </h2>
+                    <p className="text-gray-500">
+                      You don't have any messages yet.
+                    </p>
+                  </motion.div>
                 </div>
-              </div>
-            ) : (
-              FilterMessages.map((msg, i) => {
-                const DateMsg = new Date(msg.createdAt);
-                const now = new Date();
-                const yesterday = new Date();
-                yesterday.setDate(now.getDate() - 1);
-                const isToday = DateMsg.toDateString() === now.toDateString();
-                const isYesterday = DateMsg.toDateString() === yesterday.toDateString();
-                const dateLabel = isToday ? "Today," : isYesterday ? "Yesterday," : DateMsg.toLocaleDateString();
+              ) : (
+                FilterMessages.map((msg, i) => {
+                  const DateMsg = new Date(msg.createdAt);
+                  const now = new Date();
+                  const yesterday = new Date();
+                  yesterday.setDate(now.getDate() - 1);
+                  const isToday = DateMsg.toDateString() === now.toDateString();
+                  const isYesterday = DateMsg.toDateString() === yesterday.toDateString();
+                  const dateLabel = isToday ? "Today," : isYesterday ? "Yesterday," : DateMsg.toLocaleDateString();
 
-                return (
-                  <div key={i} id={msg._id} className="mb-4">
-                    <div className={`${msg.from?.email === email ? "flex items-start flex-row-reverse gap-2" : "flex items-start gap-2"}`}>
-                      <div className="relative w-10 h-10 shrink-0 mt-1">
-                        <Image alt="Logo"
-                          src={msg.from?.profileImage || "/default-avatar.png"}
-                          fill
-                          sizes="40px"
-                          className="hover:scale-105 cursor-pointer duration-300 rounded-full object-cover aspect-square"
-                        />
-                      </div>
-
-                      <div className={`p-2 rounded-md md:text-base text-xs max-w-[75%] md:max-w-[70%] ${msg.from?.email === email ? "bg-sky-400" : "bg-green-400"}`}>
-                        <div className="whitespace-pre-wrap break-words">
-                          <Linkify>{msg.message}</Linkify>
+                  return (
+                    <motion.div
+                      key={msg._id || i}
+                      id={msg._id}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="mb-4"
+                    >
+                      <div className={`${msg.from?.email === email ? "flex items-start flex-row-reverse gap-2" : "flex items-start gap-2"}`}>
+                        <div className="relative w-10 h-10 shrink-0 mt-1">
+                          <Image alt="Logo"
+                            src={msg.from?.profileImage || "/default-avatar.png"}
+                            fill
+                            sizes="40px"
+                            className="hover:scale-105 cursor-pointer duration-300 rounded-full object-cover aspect-square"
+                          />
                         </div>
-                      </div>
 
-                      <div className={`relative message-menu-container ${msg.from?.email === email ? "block" : "hidden"}`}>
-                        <button
-                          onClick={() => setActiveMessageMenu(activeMessageMenu === msg._id ? null : msg._id)}
-                          className="hover:bg-gray-100 rounded-full transition-colors mt-1 text-gray-500"
-                        >
-                          <EllipsisVertical width={18} />
-                        </button>
+                        <div className={`p-3 md:p-4 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed ${msg.from?.email === email
+                          ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl rounded-tr-none"
+                          : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 rounded-2xl rounded-tl-none border border-gray-200"
+                          }`}>
+                          <div className="whitespace-pre-wrap break-words">
+                            <Linkify>{msg.message}</Linkify>
+                          </div>
+                        </div>
 
-                        {activeMessageMenu === msg._id && (
-                          <>
-                            {/* Backdrop for mobile */}
-                            <div
-                              className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-40 md:hidden"
-                              onClick={() => setActiveMessageMenu(null)}
-                            />
+                        <div className={`relative message-menu-container ${msg.from?.email === email ? "block" : "hidden"}`}>
+                          <button
+                            onClick={() => setActiveMessageMenu(activeMessageMenu === msg._id ? null : msg._id)}
+                            className="hover:bg-gray-100 rounded-full transition-colors mt-1 text-gray-500"
+                          >
+                            <EllipsisVertical width={18} />
+                          </button>
 
-                            {/* Menu Container */}
-                            <div className={`
+                          {activeMessageMenu === msg._id && (
+                            <>
+                              {/* Backdrop for mobile */}
+                              <div
+                                className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-40 md:hidden"
+                                onClick={() => setActiveMessageMenu(null)}
+                              />
+
+                              {/* Menu Container */}
+                              <div className={`
                               fixed inset-x-0 bottom-0 z-50 p-3 bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300
                               md:absolute md:inset-auto md:-top-10 ${msg.from?.email === email ? "md:right-full md:mr-2" : "md:left-full md:ml-2"} 
                               md:bg-white md:border md:border-gray-100 md:shadow-xl md:rounded-xl md:p-1.5 md:z-30 md:min-w-[150px] md:animate-in md:fade-in md:zoom-in-95 md:duration-100
                             `}>
-                              {/* Mobile Handle Bar */}
-                              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3 md:hidden" />
+                                {/* Mobile Handle Bar */}
+                                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-3 md:hidden" />
 
-                              <button
-                                onClick={() => copyToClipboard(msg.message)}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl md:rounded-lg transition-colors text-left"
-                              >
-                                <Copy size={16} className="md:w-4 md:h-4" />
-                                <span className="font-medium md:font-normal">Copy</span>
-                              </button>
+                                <button
+                                  onClick={() => copyToClipboard(msg.message)}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl md:rounded-lg transition-colors text-left"
+                                >
+                                  <Copy size={16} className="md:w-4 md:h-4" />
+                                  <span className="font-medium md:font-normal">Copy</span>
+                                </button>
 
-                              <button
-                                onClick={() => {
-                                  setIdMsg(msg._id);
-                                  setUMessage(msg.message);
-                                  setShowEditModal(true);
-                                  setActiveMessageMenu(null);
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-600 rounded-xl md:rounded-lg transition-colors text-left"
-                              >
-                                <Edit size={16} className="md:w-4 md:h-4" />
-                                <span className="font-medium md:font-normal">Edit</span>
-                              </button>
+                                <button
+                                  onClick={() => {
+                                    setIdMsg(msg._id);
+                                    setUMessage(msg.message);
+                                    setShowEditModal(true);
+                                    setActiveMessageMenu(null);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-600 rounded-xl md:rounded-lg transition-colors text-left"
+                                >
+                                  <Edit size={16} className="md:w-4 md:h-4" />
+                                  <span className="font-medium md:font-normal">Edit</span>
+                                </button>
 
-                              <div className="h-px bg-gray-100 my-1 mx-2" />
+                                <div className="h-px bg-gray-100 my-1 mx-2" />
 
-                              <button
-                                onClick={() => {
-                                  setIdMsg(msg._id);
-                                  setShowDeleteModal(true);
-                                  setActiveMessageMenu(null);
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl md:rounded-lg transition-colors text-left font-semibold md:font-medium"
-                              >
-                                <Trash2 size={16} className="md:w-4 md:h-4" />
-                                <span>Delete</span>
-                              </button>
+                                <button
+                                  onClick={() => {
+                                    setIdMsg(msg._id);
+                                    setShowDeleteModal(true);
+                                    setActiveMessageMenu(null);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl md:rounded-lg transition-colors text-left font-semibold md:font-medium"
+                                >
+                                  <Trash2 size={16} className="md:w-4 md:h-4" />
+                                  <span>Delete</span>
+                                </button>
 
-                              {/* Mobile Cancel Button */}
-                              <button
-                                onClick={() => setActiveMessageMenu(null)}
-                                className="w-full mt-1 py-2 text-center text-gray-500 text-sm font-bold md:hidden"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </>
-                        )}
+                                {/* Mobile Cancel Button */}
+                                <button
+                                  onClick={() => setActiveMessageMenu(null)}
+                                  className="w-full mt-1 py-2 text-center text-gray-500 text-sm font-bold md:hidden"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className={`flex flex-col ${msg.from?.email === email ? "items-end mr-14" : "items-start ml-14"}`}>
-                      <span className="text-[10px] text-gray-400">
-                        {msg.updated && "Edited"}
-                      </span>
-                      <div className="flex gap-2 text-[11px] text-gray-500">
-                        <p>{dateLabel}</p>
-                        <p>{DateMsg.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      <div className={`flex flex-col ${msg.from?.email === email ? "items-end mr-14" : "items-start ml-14"}`}>
+                        <span className="text-[10px] text-gray-400">
+                          {msg.updated && "Edited"}
+                        </span>
+                        <div className="flex gap-2 text-[11px] text-gray-500">
+                          <p>{dateLabel}</p>
+                          <p>{DateMsg.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
+                  );
+                })
+              )}
+              {isTyping === selectedUser?._id && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 mb-4 ml-2"
+                >
+                  <div className="flex gap-1 bg-gray-100 p-2 rounded-2xl rounded-bl-none shadow-sm border border-gray-200">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
                   </div>
-                );
-              })
-            )}
+                  <span className="text-[10px] text-gray-400 font-medium italic">Typing...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div ref={scrollRef} className="h-2" />
           </div>
 
           <div className="flex-none mt-2">
@@ -546,10 +638,22 @@ function Messages() {
 
                 <textarea
                   ref={messageInputRef}
-                  maxLength={1000}
+                  maxLength={500}
                   placeholder="Type a message..."
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={(e) => {
+                    setMessageInput(e.target.value);
+
+                    if (socket && selectedUser) {
+                      socket.emit("typing", { from: userDetails._id, to: selectedUser });
+
+                      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+                      typingTimeoutRef.current = setTimeout(() => {
+                        socket.emit("stop_typing", { from: userDetails._id, to: selectedUser });
+                      }, 2000);
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       // Only send on Enter if on Desktop (width > 768px)
@@ -595,231 +699,240 @@ function Messages() {
         )}
       </div>
 
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-4 text-red-600">
-              <div className="p-2 bg-red-100 rounded-full">
-                <Trash2 size={24} />
-              </div>
-              <h3 className="text-xl font-bold">Delete Message?</h3>
-            </div>
-            <p className="mb-6 text-gray-600 leading-relaxed">This action cannot be undone. The message will be permanently removed from the conversation.</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-5 py-2.5 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={deleteMsg}
-                disabled={loadingd}
-                className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[120px] shadow-lg shadow-red-200"
-              >
-                {loadingd ? <Spinner className="w-5 h-5 text-white" /> : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-          <div className="bg-white p-4 md:p-6 rounded-2xl shadow-2xl w-full max-w-sm md:max-w-md animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-3 md:mb-6">
-              <div className="flex items-center gap-2 md:gap-3 text-indigo-600">
-                <div className="p-1 md:p-2 bg-indigo-50 rounded-lg">
-                  <Edit size={18} className="md:w-[22px] md:h-[22px]" />
+      {
+        showDeleteModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+            <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3 mb-4 text-red-600">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <Trash2 size={24} />
                 </div>
-                <h3 className="text-base md:text-xl font-bold">Edit Message</h3>
+                <h3 className="text-xl font-bold">Delete Message?</h3>
               </div>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
-              >
-                <CircleX size={20} className="md:w-6 md:h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-3 md:space-y-4">
-              <div className="relative">
-                <textarea
-                  ref={umessageRef}
-                  value={umessage}
-                  onChange={(e) => setUMessage(e.target.value)}
-                  placeholder="Update your message..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 md:p-4 min-h-[80px] md:min-h-[120px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-xs md:text-base text-gray-800 sleek-scrollbar"
-                />
-                <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3 flex items-center gap-2">
-                  <div
-                    onClick={() => setEmoji(!emoji)}
-                    className="cursor-pointer p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all emoji-toggle"
-                  >
-                    <BsEmojiSmile size={16} className="md:w-5 md:h-5" />
-                  </div>
-                </div>
-                {showEditModal && (
-                  <div ref={emojiRef}>
-                    {/* Desktop Version */}
-                    <div className={`absolute left-full top-1/2 -translate-y-1/2 ml-12 z-50 hidden lg:block transition-all duration-300 ease-out origin-left
-                      ${emoji ? "opacity-0 scale-95 translate-x-4 pointer-events-none" : "opacity-100 scale-100 translate-x-0 pointer-events-auto"}`}>
-                      <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                        <EmojiPicker
-                          onEmojiClick={addEmoji}
-                          theme="light"
-                          emojiStyle="apple"
-                          lazyLoadEmojis={true}
-                          previewConfig={{ showPreview: false }}
-                          skinTonesDisabled={true}
-                          width={350}
-                          height={400}
-                        />
-                      </div>
-                    </div>
-                    {/* Mobile Version */}
-                    <div className={`absolute top-full left-1/2 -translate-x-[85%] mt-2 z-50 lg:hidden transition-all duration-300 ease-out origin-top-right
-                      ${emoji ? "opacity-0 scale-75 -translate-y-4 pointer-events-none" : "opacity-100 scale-[0.8] translate-y-0 pointer-events-auto"}`}>
-                      <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                        <EmojiPicker
-                          onEmojiClick={addEmoji}
-                          theme="light"
-                          emojiStyle="apple"
-                          lazyLoadEmojis={true}
-                          previewConfig={{ showPreview: false }}
-                          skinTonesDisabled={true}
-                          width={300}
-                          height={350}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 md:gap-3 mt-3 md:mt-4">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-3 py-1.5 md:px-5 md:py-2.5 text-xs md:text-base text-gray-600 font-semibold rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={updateMsg}
-                disabled={loadingu || !umessage.trim()}
-                className="px-4 py-1.5 md:px-6 md:py-2.5 text-xs md:text-base bg-indigo-600 text-white rounded-lg md:rounded-xl hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[80px] md:min-w-[140px] shadow-lg shadow-indigo-200"
-              >
-                {loadingu ? <Spinner className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" /> : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showClearModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200"
-          onClick={() => setShowClearModal(false)}
-        >
-          <div
-            className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4 text-red-600">
-              <div className="p-2 bg-red-50 rounded-full">
-                <Trash2 size={24} />
-              </div>
-              <h3 className="text-xl font-bold">Clear Chat?</h3>
-            </div>
-            <p className="mb-6 text-gray-600 leading-relaxed">Are you sure you want to delete all messages with this user? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowClearModal(false)}
-                className="px-5 py-2.5 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={clearChat}
-                disabled={loadingClear}
-                className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[140px] shadow-lg shadow-red-200"
-              >
-                {loadingClear ? <Spinner className="w-5 h-5 text-white" /> : "Clear Conversation"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showProfileModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-in zoom-in-95 duration-200 relative">
-            <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
-              <button
-                onClick={() => setShowProfileModal(false)}
-                className="absolute top-4 right-4 text-white hover:bg-white/20 p-1.5 rounded-full transition-colors z-10"
-              >
-                <CircleX size={24} />
-              </button>
-            </div>
-            <div className="px-6 pb-8 relative">
-              <div className="relative flex justify-center -mt-16 mb-4">
-                <div className="p-1.5 bg-white rounded-full shadow-lg overflow-hidden">
-                  <div className="relative w-32 h-32">
-                    <Image
-                      src={selectedUser.profileImage || "/default-avatar.png"}
-                      alt={selectedUser.fullname}
-                      fill
-                      sizes="128px"
-                      className="rounded-full object-cover border-4 border-indigo-50"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="text-center space-y-1 mb-8">
-                <h3 className="text-2xl font-bold text-gray-800">{selectedUser.fullname}</h3>
-                <p className="text-indigo-500 font-medium text-sm">@{selectedUser.username || selectedUser.email.split('@')[0]}</p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors group">
-                  <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                    <Mail size={20} />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Email</p>
-                    <p className="text-gray-900 font-medium truncate text-sm" title={selectedUser.email}>
-                      {selectedUser.email}
-                    </p>
-                  </div>
-                </div>
-                {selectedUser.phoneNumber && (
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors group">
-                    <div className="p-2.5 bg-green-100 text-green-600 rounded-lg group-hover:bg-green-200 transition-colors">
-                      <Phone size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Phone</p>
-                      <p className="text-gray-900 font-medium text-sm">
-                        {selectedUser.phoneNumber}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="mt-8">
+              <p className="mb-6 text-gray-600 leading-relaxed">This action cannot be undone. The message will be permanently removed from the conversation.</p>
+              <div className="flex justify-end gap-3">
                 <button
-                  onClick={() => setShowProfileModal(false)}
-                  className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold text-sm tracking-wide hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-[0.98]"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-5 py-2.5 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
                 >
-                  Close Profile
+                  Cancel
+                </button>
+                <button
+                  onClick={deleteMsg}
+                  disabled={loadingd}
+                  className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[120px] shadow-lg shadow-red-200"
+                >
+                  {loadingd ? <Spinner className="w-5 h-5 text-white" /> : "Delete"}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+
+      {
+        showEditModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-2xl w-full max-w-sm md:max-w-md animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between mb-3 md:mb-6">
+                <div className="flex items-center gap-2 md:gap-3 text-indigo-600">
+                  <div className="p-1 md:p-2 bg-indigo-50 rounded-lg">
+                    <Edit size={18} className="md:w-[22px] md:h-[22px]" />
+                  </div>
+                  <h3 className="text-base md:text-xl font-bold">Edit Message</h3>
+                </div>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+                >
+                  <CircleX size={20} className="md:w-6 md:h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-3 md:space-y-4">
+                <div className="relative">
+                  <textarea
+                    ref={umessageRef}
+                    value={umessage}
+                    maxLength={500}
+                    onChange={(e) => setUMessage(e.target.value)}
+                    placeholder="Update your message..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 md:p-4 min-h-[80px] md:min-h-[120px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-xs md:text-base text-gray-800 sleek-scrollbar"
+                  />
+                  <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3 flex items-center gap-2">
+                    <div
+                      onClick={() => setEmoji(!emoji)}
+                      className="cursor-pointer p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all emoji-toggle"
+                    >
+                      <BsEmojiSmile size={16} className="md:w-5 md:h-5" />
+                    </div>
+                  </div>
+                  {showEditModal && (
+                    <div ref={emojiRef}>
+                      {/* Desktop Version */}
+                      <div className={`absolute left-full top-1/2 -translate-y-1/2 ml-12 z-50 hidden lg:block transition-all duration-300 ease-out origin-left
+                      ${emoji ? "opacity-0 scale-95 translate-x-4 pointer-events-none" : "opacity-100 scale-100 translate-x-0 pointer-events-auto"}`}>
+                        <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+                          <EmojiPicker
+                            onEmojiClick={addEmoji}
+                            theme="light"
+                            emojiStyle="apple"
+                            lazyLoadEmojis={true}
+                            previewConfig={{ showPreview: false }}
+                            skinTonesDisabled={true}
+                            width={350}
+                            height={400}
+                          />
+                        </div>
+                      </div>
+                      {/* Mobile Version */}
+                      <div className={`absolute top-full left-1/2 -translate-x-[85%] mt-2 z-50 lg:hidden transition-all duration-300 ease-out origin-top-right
+                      ${emoji ? "opacity-0 scale-75 -translate-y-4 pointer-events-none" : "opacity-100 scale-[0.8] translate-y-0 pointer-events-auto"}`}>
+                        <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+                          <EmojiPicker
+                            onEmojiClick={addEmoji}
+                            theme="light"
+                            emojiStyle="apple"
+                            lazyLoadEmojis={true}
+                            previewConfig={{ showPreview: false }}
+                            skinTonesDisabled={true}
+                            width={300}
+                            height={350}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 md:gap-3 mt-3 md:mt-4">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="px-3 py-1.5 md:px-5 md:py-2.5 text-xs md:text-base text-gray-600 font-semibold rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={updateMsg}
+                  disabled={loadingu || !umessage.trim()}
+                  className="px-4 py-1.5 md:px-6 md:py-2.5 text-xs md:text-base bg-indigo-600 text-white rounded-lg md:rounded-xl hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[80px] md:min-w-[140px] shadow-lg shadow-indigo-200"
+                >
+                  {loadingu ? <Spinner className="w-3.5 h-3.5 md:w-5 md:h-5 text-white" /> : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showClearModal && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200"
+            onClick={() => setShowClearModal(false)}
+          >
+            <div
+              className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4 text-red-600">
+                <div className="p-2 bg-red-50 rounded-full">
+                  <Trash2 size={24} />
+                </div>
+                <h3 className="text-xl font-bold">Clear Chat?</h3>
+              </div>
+              <p className="mb-6 text-gray-600 leading-relaxed">Are you sure you want to delete all messages with this user? This action cannot be undone.</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowClearModal(false)}
+                  className="px-5 py-2.5 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={clearChat}
+                  disabled={loadingClear}
+                  className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[140px] shadow-lg shadow-red-200"
+                >
+                  {loadingClear ? <Spinner className="w-5 h-5 text-white" /> : "Clear Conversation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showProfileModal && selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-in zoom-in-95 duration-200 relative">
+              <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
+                <button
+                  onClick={() => setShowProfileModal(false)}
+                  className="absolute top-4 right-4 text-white hover:bg-white/20 p-1.5 rounded-full transition-colors z-10"
+                >
+                  <CircleX size={24} />
+                </button>
+              </div>
+              <div className="px-6 pb-8 relative">
+                <div className="relative flex justify-center -mt-16 mb-4">
+                  <div className="p-1.5 bg-white rounded-full shadow-lg overflow-hidden">
+                    <div className="relative w-32 h-32">
+                      <Image
+                        src={selectedUser.profileImage || "/default-avatar.png"}
+                        alt={selectedUser.fullname}
+                        fill
+                        sizes="128px"
+                        className="rounded-full object-cover border-4 border-indigo-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center space-y-1 mb-8">
+                  <h3 className="text-2xl font-bold text-gray-800">{selectedUser.fullname}</h3>
+                  <p className="text-indigo-500 font-medium text-sm">@{selectedUser.username || selectedUser.email.split('@')[0]}</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors group">
+                    <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-200 transition-colors">
+                      <Mail size={20} />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Email</p>
+                      <p className="text-gray-900 font-medium truncate text-sm" title={selectedUser.email}>
+                        {selectedUser.email}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedUser.phoneNumber && (
+                    <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors group">
+                      <div className="p-2.5 bg-green-100 text-green-600 rounded-lg group-hover:bg-green-200 transition-colors">
+                        <Phone size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Phone</p>
+                        <p className="text-gray-900 font-medium text-sm">
+                          {selectedUser.phoneNumber}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-8">
+                  <button
+                    onClick={() => setShowProfileModal(false)}
+                    className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold text-sm tracking-wide hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-[0.98]"
+                  >
+                    Close Profile
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }
 

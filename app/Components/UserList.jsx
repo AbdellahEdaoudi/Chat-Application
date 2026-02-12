@@ -63,29 +63,6 @@ function UserList() {
     if (window.innerWidth < 768) {
       router.push(`/chat`);
     }
-    if (user && user.unreadCount > 0) {
-      try {
-        await axios.put(
-          `${SERVER_URL_V}/readorno`,
-          { from: user._id },
-          { withCredentials: true }
-        );
-        setUsers(users.map((u) => u._id.toString() === user._id.toString() ? { ...u, unreadCount: 0 } : u));
-        if (messages && setMessages) {
-          setMessages(messages.map((m) => {
-            const fromId = typeof m.from === 'object' ? m.from._id : m.from;
-            return fromId.toString() === user._id.toString() ? { ...m, readorno: true } : m;
-          }));
-        }
-      } catch (error) {
-        console.error("Error marking messages as read:", error);
-        if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-          logout();
-        }
-        const message = error.response?.data?.message || "Error marking messages as read";
-        toast.error(message);
-      }
-    }
   };
 
   const list = searchQuery ? allUsers : users;

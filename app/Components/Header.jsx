@@ -6,11 +6,39 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { MyContext } from "../Context/MyContext";
+import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 
 function Header() {
-  const { logout, userDetails } = useContext(MyContext);
+  const {
+    logout, userDetails, users, setUsers,
+    setSelectedUser, onlineUsers, SERVER_URL_V,
+    messages, setMessages
+  } = useContext(MyContext);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
+  const unreadUsers = users.filter(u => u.unreadCount > 0);
+  const totalUnread = unreadUsers.reduce((acc, curr) => acc + curr.unreadCount, 0);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const markAsRead = async (user) => {
+    localStorage.setItem("selectedUser", JSON.stringify(user));
+    setSelectedUser(user);
+    setShowNotifications(false);
+    router.push(`/chat`);
+  };
 
   const Logout = async () => {
     setLoading(true);
@@ -65,6 +93,91 @@ function Header() {
                   </div>
                 </Link>
 
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-300 relative group"
+                  >
+                    <Bell size={24} className="group-hover:text-blue-600 transition-colors" />
+                    {unreadUsers.length > 0 && (
+                      <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">
+                        {unreadUsers.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <>
+                        {/* Mobile Backdrop */}
+                        <div
+                          className="fixed inset-0 bg-black/5 z-[90] md:hidden"
+                          onClick={() => setShowNotifications(false)}
+                        />
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="fixed inset-x-4 top-20 md:absolute md:inset-auto md:right-0 md:mt-3 md:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[100] overflow-hidden"
+                        >
+                          <div className="p-4 border-b bg-gray-50/50 flex justify-between items-center">
+                            <h3 className="font-bold text-gray-800">Notifications</h3>
+                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-bold">
+                              {unreadUsers.length} New
+                            </span>
+                          </div>
+
+                          <div className="max-h-[400px] overflow-y-auto sleek-scrollbar">
+                            {unreadUsers.length > 0 ? (
+                              unreadUsers.map((user) => (
+                                <div
+                                  key={user._id}
+                                  onClick={() => markAsRead(user)}
+                                  className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0"
+                                >
+                                  <div className="relative w-10 h-10 shrink-0">
+                                    <div className={`relative w-full h-full rounded-full overflow-hidden bg-gray-200 border border-gray-100`}>
+                                      <Image
+                                        src={user.profileImage || "/default-avatar.png"}
+                                        alt="Profile"
+                                        fill
+                                        sizes="40px"
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                    {onlineUsers.some(u => u.userId === user._id) && (
+                                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-center">
+                                      <p className="text-sm font-bold text-gray-800 truncate">{user.fullname}</p>
+                                      <span className="bg-blue-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                                        {user.unreadCount}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                                      {user.lastMessage || "Sent a message"}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-8 text-center bg-white">
+                                <div className="mb-3 flex justify-center">
+                                  <MessagesSquare className="text-gray-200" size={48} />
+                                </div>
+                                <p className="text-gray-400 font-medium italic">No new messages</p>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {/* Logout Button */}
                 <button
                   onClick={Logout}
@@ -97,7 +210,7 @@ function Header() {
           </div>
         </section>
       </nav>
-    </div>
+    </div >
   );
 }
 

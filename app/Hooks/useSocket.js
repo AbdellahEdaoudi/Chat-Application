@@ -4,6 +4,7 @@ import { decryptMessage } from '../utils/encryption';
 
 export const useSocket = (serverUrl, userDetails, setMessages, setOnlineUsers, privateKey) => {
     const [socket, setSocket] = useState(null);
+    const [isTyping, setIsTyping] = useState(null); // from user ID
 
     useEffect(() => {
         if (userDetails) {
@@ -52,11 +53,19 @@ export const useSocket = (serverUrl, userDetails, setMessages, setOnlineUsers, p
                 ));
             });
 
+            newSocket.on("user_typing", ({ from }) => {
+                setIsTyping(from);
+            });
+
+            newSocket.on("user_stop_typing", ({ from }) => {
+                setIsTyping(null);
+            });
+
             return () => {
                 newSocket.disconnect();
             };
         }
     }, [userDetails?._id, serverUrl, privateKey]);
 
-    return socket;
+    return { socket, isTyping };
 };
