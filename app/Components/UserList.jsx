@@ -137,7 +137,7 @@ function UserList() {
                     }`}
                 >
                   <div className="relative w-12 h-12 shrink-0">
-                    <div className={`relative w-full h-full rounded-full overflow-hidden bg-gray-300 ${user.isOnline ? "border-2 border-green-500" : ""}`}>
+                    <div className={`relative w-full h-full rounded-full overflow-hidden bg-gray-300 ${user.isOnline ? "border-2 border-green-500" : "border-2 border-gray-500"}`}>
                       <div className="absolute inset-0 flex items-center justify-center text-gray-500">
                         <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>

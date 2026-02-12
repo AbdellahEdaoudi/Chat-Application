@@ -656,29 +656,33 @@ function Messages() {
                   </div>
                 </div>
                 {showEditModal && (
-                  <div ref={emojiRef} className={`absolute left-full top-1/2 -translate-y-1/2 ml-12 z-50 hidden lg:block animate-in fade-in slide-in-from-left-2 duration-300 ${emoji ? "!hidden" : "!block"}`}>
-                    <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                      <Picker
-                        data={data}
-                        onEmojiSelect={addEmoji}
-                        theme="light"
-                        previewPosition="none"
-                        skinTonePosition="none"
-                      />
+                  <div ref={emojiRef}>
+                    {/* Desktop Version */}
+                    <div className={`absolute left-full top-1/2 -translate-y-1/2 ml-12 z-50 hidden lg:block transition-all duration-300 ease-out origin-left
+                      ${emoji ? "opacity-0 scale-95 translate-x-4 pointer-events-none" : "opacity-100 scale-100 translate-x-0 pointer-events-auto"}`}>
+                      <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+                        <Picker
+                          data={data}
+                          onEmojiSelect={addEmoji}
+                          theme="light"
+                          previewPosition="none"
+                          skinTonePosition="none"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-                {/* Mobile Fallback: Centered bottom if screen is small */}
-                {showEditModal && (
-                  <div ref={emojiRef} className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 lg:hidden animate-in fade-in slide-in-from-bottom-2 duration-300 ${emoji ? "hidden" : "block"}`}>
-                    <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-                      <Picker
-                        data={data}
-                        onEmojiSelect={addEmoji}
-                        theme="light"
-                        previewPosition="none"
-                        skinTonePosition="none"
-                      />
+                    {/* Mobile Version */}
+                    <div className={`absolute top-full left-1/2 -translate-x-[85%] mt-2 z-50 lg:hidden transition-all duration-300 ease-out origin-top-right
+                      ${emoji ? "opacity-0 scale-75 -translate-y-4 pointer-events-none" : "opacity-100 scale-[0.8] translate-y-0 pointer-events-auto"}`}>
+                      <div className="shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+                        <Picker
+                          data={data}
+                          onEmojiSelect={addEmoji}
+                          theme="light"
+                          previewPosition="none"
+                          skinTonePosition="none"
+                          perLine={7}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
