@@ -10,12 +10,12 @@ import { generateKeyPair, decryptMessage } from '../utils/encryption';
 export const MyContext = createContext();
 
 export const MyProvider = ({ children }) => {
-  // const CLIENT_URL = "http://localhost:3000";
-  // const SERVER_URL = "http://localhost:2222";
-  // const SERVER_URL_V = "http://localhost:2222";
-  const CLIENT_URL = "https://edchatflow.vercel.app"
-  const SERVER_URL = "https://server-chat-application-s55v.onrender.com";
-  const SERVER_URL_V = "https://chat-application-server-url.vercel.app";
+  const CLIENT_URL = "http://localhost:3000";
+  const SERVER_URL = "http://localhost:2222";
+  const SERVER_URL_V = "http://localhost:2222";
+  // const CLIENT_URL = "https://edchatflow.vercel.app"
+  // const SERVER_URL = "https://server-chat-application-s55v.onrender.com";
+  // const SERVER_URL_V = "https://chat-application-server-url.vercel.app";
 
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
@@ -131,7 +131,7 @@ export const MyProvider = ({ children }) => {
 
           uniqueUsers.push({
             ...otherUser,
-            lastMessage: msg.message,
+            lastMessage: isFromMe ? `You: ${msg.message}` : msg.message,
             unreadCount: unreadCount,
           });
         }

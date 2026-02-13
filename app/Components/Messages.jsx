@@ -4,7 +4,7 @@ import Image from "next/image";
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { BsEmojiSmile, BsChatSquareDots } from "react-icons/bs";
 import EmojiPicker from "emoji-picker-react";
-import { EllipsisVertical, Mail, Phone, CircleX, Send, Copy, Edit, Trash2 } from "@/app/Components/lucide-react/lucide-react";
+import { EllipsisVertical, Mail, Phone, CircleX, Send, Copy, Edit, Trash2, Check, CheckCheck, Search, Reply } from "@/app/Components/lucide-react/lucide-react";
 import { encryptMessage, decryptMessage } from "../utils/encryption";
 import Linkify from "linkify-react";
 import { MyContext } from "../Context/MyContext";
@@ -25,6 +25,9 @@ function Messages() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [activeMessageMenu, setActiveMessageMenu] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [msgSearchQuery, setMsgSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   const messageInputRef = useRef(null);
   const umessageRef = useRef(null);
@@ -54,11 +57,40 @@ function Messages() {
     const myId = userDetails._id;
     const selectedId = selectedUser._id;
 
-    return (
-      (fromId === myId && toId === selectedId) ||
-      (fromId === selectedId && toId === myId)
-    );
+    const matchesFilter = (fromId === myId && toId === selectedId) ||
+      (fromId === selectedId && toId === myId);
+
+    if (msgSearchQuery.trim() !== "") {
+      return matchesFilter && fl.message.toLowerCase().includes(msgSearchQuery.toLowerCase());
+    }
+
+    return matchesFilter;
   }).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  const scrollToMessage = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("animate-highlight");
+      setTimeout(() => {
+        el.classList.remove("animate-highlight");
+      }, 2000);
+    }
+  };
+
+  const highlightSearchTerm = (text, query) => {
+    if (!query || !query.trim()) return text;
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <mark key={i} className="bg-yellow-300 text-black px-0.5 rounded-sm font-bold shadow-sm">
+          {part}
+        </mark>
+      ) : part
+    );
+  };
 
   // Scroll logic
   useEffect(() => {
@@ -168,6 +200,7 @@ function Messages() {
         from: userDetails._id,
         to: selectedUser._id,
         message: messageInput,
+        replyTo: replyingTo?._id || null
       };
 
       // Apply E2EE if public keys are available
@@ -192,15 +225,16 @@ function Messages() {
       };
 
       setMessages((prev) => [...prev, savedMsg]);
-      setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: messageInput } : u));
+      setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: `You: ${messageInput}` } : u));
 
       if (socket) {
-        // Send the encrypted message from response.data so the recipient can decrypt it
+        // Send the full populated message from response.data so the recipient has replyTo info
         socket.emit("send_msg", { ...response.data, to: selectedUser });
       }
 
       toast.success("Sent successfully");
       setMessageInput("");
+      setReplyingTo(null);
       setEmoji(true);
 
     } catch (error) {
@@ -225,10 +259,14 @@ function Messages() {
         socket.emit("del_msg", { messageId: idMsg, to: selectedUser });
       }
 
-      // Update users last message
       const newMessages = messages.filter((msg) => msg._id !== idMsg);
-      const lastMsg = newMessages.length > 0 ? newMessages[newMessages.length - 1].message : "";
-      setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: lastMsg } : u));
+      const lastMsgObj = newMessages.length > 0 ? newMessages[newMessages.length - 1] : null;
+      let lastMsgText = "";
+      if (lastMsgObj) {
+        const isMe = getID(lastMsgObj.from) === userDetails._id;
+        lastMsgText = isMe ? `You: ${lastMsgObj.message}` : lastMsgObj.message;
+      }
+      setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: lastMsgText } : u));
 
       toast.success("Deleted successfully");
       setEmoji(true);
@@ -280,7 +318,7 @@ function Messages() {
       // Update users last message if it was the last one
       const isLast = messages.length > 0 && messages[messages.length - 1]._id === idMsg;
       if (isLast) {
-        setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: umessage } : u));
+        setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: `You: ${umessage}` } : u));
       }
 
       toast.success("Updated successfully");
@@ -421,12 +459,18 @@ function Messages() {
                   <p className="font-bold md:block hidden">
                     {selectedUser.phoneNumber}
                   </p>
-                  <div className="relative" ref={menuRef}>
+                  <div className="relative flex items-center gap-1" ref={menuRef}>
+                    <button
+                      onClick={() => setShowSearch(!showSearch)}
+                      className={`p-2 rounded-full transition ${showSearch ? "bg-indigo-100 text-indigo-600" : "hover:bg-gray-300"}`}
+                    >
+                      <Search size={20} />
+                    </button>
                     <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-gray-300 rounded-full transition">
                       <EllipsisVertical size={20} />
                     </button>
                     {showMenu && (
-                      <div className="absolute right-0 top-10 bg-white shadow-md rounded-md p-2 z-10 w-40">
+                      <div className="absolute right-0 top-10 bg-white shadow-md rounded-md p-2 z-10 w-40 border border-gray-100">
                         <button
                           onClick={() => {
                             setShowClearModal(true);
@@ -451,6 +495,33 @@ function Messages() {
                 </div>
               )}
             </h2>
+            {showSearch && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                className="mb-2 px-2"
+              >
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search in messages..."
+                    value={msgSearchQuery}
+                    onChange={(e) => setMsgSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    autoFocus
+                  />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  {msgSearchQuery && (
+                    <button
+                      onClick={() => setMsgSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <CircleX size={16} />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </div>
 
           <div className="flex-1 bg-white p-4 rounded-lg shadow-lg sleek-scrollbar overflow-y-auto">
@@ -524,16 +595,47 @@ function Messages() {
                           />
                         </div>
 
-                        <div className={`p-2 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed ${msg.from?.email === email
-                          ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl rounded-tr-none"
-                          : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 rounded-2xl rounded-tl-none border border-gray-200"
-                          }`}>
+                        <div
+                          className={`p-2 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed ${msg.from?.email === email
+                            ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl rounded-tr-none"
+                            : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 rounded-2xl rounded-tl-none border border-gray-200"
+                            }`}>
+                          {msg.replyTo && (
+                            (() => {
+                              const replyId = typeof msg.replyTo === 'object' ? msg.replyTo._id : msg.replyTo;
+                              const originalMsg = messages.find(m => m._id === replyId);
+
+                              const replySenderEmail = originalMsg?.from?.email || (typeof msg.replyTo === 'object' ? msg.replyTo.from?.email : null);
+                              const isFromMe = replySenderEmail === email;
+
+                              const displayName = isFromMe ? "You" : (originalMsg?.from?.fullname || (typeof msg.replyTo === 'object' ? msg.replyTo.from?.fullname : "User"));
+                              const displayContent = originalMsg?.message || (typeof msg.replyTo === 'object' ? msg.replyTo.message : "...");
+
+                              return (
+                                <div
+                                  onClick={() => scrollToMessage(replyId)}
+                                  className={`mb-1 p-1 rounded-lg text-[11px] cursor-pointer border-l-4 transition-all hover:brightness-95 ${msg.from?.email === email
+                                    ? "bg-indigo-700/30 border-white/60 text-indigo-50"
+                                    : "bg-gray-300/60 border-indigo-400 text-gray-700"
+                                    }`}
+                                >
+                                  <p className="font-bold truncate flex items-center gap-1">
+                                    <Reply size={10} />
+                                    {displayName}
+                                  </p>
+                                  <p className="line-clamp-1 opacity-90 italic">
+                                    {displayContent}
+                                  </p>
+                                </div>
+                              );
+                            })()
+                          )}
                           <div className="whitespace-pre-wrap break-words">
-                            <Linkify>{msg.message}</Linkify>
+                            <Linkify>{highlightSearchTerm(msg.message, msgSearchQuery)}</Linkify>
                           </div>
                         </div>
 
-                        <div className={`relative message-menu-container ${msg.from?.email === email ? "block" : "hidden"}`}>
+                        <div className={`relative message-menu-container block`}>
                           <button
                             onClick={() => setActiveMessageMenu(activeMessageMenu === msg._id ? null : msg._id)}
                             className="hover:bg-gray-100 rounded-full transition-colors mt-1 text-gray-500"
@@ -568,30 +670,46 @@ function Messages() {
 
                                 <button
                                   onClick={() => {
-                                    setIdMsg(msg._id);
-                                    setUMessage(msg.message);
-                                    setShowEditModal(true);
+                                    setReplyingTo(msg);
                                     setActiveMessageMenu(null);
+                                    messageInputRef.current?.focus();
                                   }}
-                                  className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-600 rounded-xl md:rounded-lg transition-colors text-left"
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl md:rounded-lg transition-colors text-left"
                                 >
-                                  <Edit size={16} className="md:w-4 md:h-4" />
-                                  <span className="font-medium md:font-normal">Edit</span>
+                                  <Reply size={16} className="md:w-4 md:h-4" />
+                                  <span className="font-medium md:font-normal">Reply</span>
                                 </button>
 
-                                <div className="h-px bg-gray-100 my-1 mx-2" />
+                                {msg.from?.email === email && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setIdMsg(msg._id);
+                                        setUMessage(msg.message);
+                                        setShowEditModal(true);
+                                        setActiveMessageMenu(null);
+                                      }}
+                                      className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-600 rounded-xl md:rounded-lg transition-colors text-left"
+                                    >
+                                      <Edit size={16} className="md:w-4 md:h-4" />
+                                      <span className="font-medium md:font-normal">Edit</span>
+                                    </button>
 
-                                <button
-                                  onClick={() => {
-                                    setIdMsg(msg._id);
-                                    setShowDeleteModal(true);
-                                    setActiveMessageMenu(null);
-                                  }}
-                                  className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl md:rounded-lg transition-colors text-left font-semibold md:font-medium"
-                                >
-                                  <Trash2 size={16} className="md:w-4 md:h-4" />
-                                  <span>Delete</span>
-                                </button>
+                                    <div className="h-px bg-gray-100 my-1 mx-2" />
+
+                                    <button
+                                      onClick={() => {
+                                        setIdMsg(msg._id);
+                                        setShowDeleteModal(true);
+                                        setActiveMessageMenu(null);
+                                      }}
+                                      className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl md:rounded-lg transition-colors text-left font-semibold md:font-medium"
+                                    >
+                                      <Trash2 size={16} className="md:w-4 md:h-4" />
+                                      <span>Delete</span>
+                                    </button>
+                                  </>
+                                )}
 
                                 {/* Mobile Cancel Button */}
                                 <button
@@ -610,7 +728,7 @@ function Messages() {
                         <span className="text-[10px] text-gray-400">
                           {msg.updated && "Edited"}
                         </span>
-                        <div className="flex gap-2 text-[11px] text-gray-500">
+                        <div className="flex gap-2 text-[11px] text-gray-500 items-baseline">
                           <p>{DateMsg.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                       </div>
@@ -640,6 +758,36 @@ function Messages() {
           </div>
 
           <div className="flex-none mt-2">
+            <AnimatePresence>
+              {replyingTo && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="mx-2 mb-1 overflow-hidden"
+                >
+                  <div className="bg-gray-100/80 backdrop-blur-sm border-l-2 border-indigo-500 rounded-lg py-0.5 px-3 flex items-center justify-between gap-2 shadow-sm border border-gray-200/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-0 leading-none">
+                        <Reply size={7} className="text-indigo-600" />
+                        <p className="text-[7px] font-bold text-indigo-600 uppercase tracking-widest leading-none">
+                          {replyingTo.from?.email === email ? "You" : (replyingTo.from?.fullname || "User")}
+                        </p>
+                      </div>
+                      <p className="text-[9px] text-gray-500 truncate italic leading-none mb-2">
+                        {replyingTo.message}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="p-0.5 hover:bg-gray-200 rounded-full transition text-gray-400 shrink-0"
+                    >
+                      <CircleX size={12} />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <div className="bg-gray-100 p-2.5 rounded-xl border border-gray-200 shadow-sm mx-1">
               <div className="flex items-center gap-3">
                 <div

@@ -173,3 +173,24 @@ export const Trash2 = (props) => (
         <line x1="14" x2="14" y1="11" y2="17" />
     </svg>
 );
+
+export const CheckCheck = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="m2 12 5.25 5 2.625-3" />
+        <path d="M8 12l5.25 5L22 7" />
+    </svg>
+);
+
+export const Search = (props) => (
+    <svg {...defaultProps} {...props}>
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+    </svg>
+);
+
+export const Reply = (props) => (
+    <svg {...defaultProps} {...props}>
+        <polyline points="9 17 4 12 9 7" />
+        <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+    </svg>
+);
