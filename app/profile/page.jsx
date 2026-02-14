@@ -11,7 +11,7 @@ import { EyeIcon, EyeOffIcon } from "../Components/lucide-react/lucide-react";
 
 
 const ProfilePage = () => {
-    const { userDetails, setUserDetails, SERVER_URL_V, logout, isLoading, getMessages, privateKey } = useContext(MyContext);
+    const { userDetails, setUserDetails, SERVER_URL_V, logout, isLoading, getMessages, privateKey, toggleStatus } = useContext(MyContext);
     const toast = useToast();
     const [showPassword, setShowPassword] = useState(false);
     const [fullname, setFullname] = useState("");
@@ -222,8 +222,25 @@ const ProfilePage = () => {
                             <h2 className="text-3xl font-extrabold text-center tracking-tight text-white drop-shadow-md">{fullname}</h2>
                             <p className="text-yellow-50 text-sm mt-3 bg-black/10 px-5 py-2 rounded-full backdrop-blur-md border border-white/10 font-medium">{email}</p>
 
-
-
+                            {/* Status Toggle */}
+                            <div className="mt-8 flex flex-col items-center gap-2">
+                                <span className="text-[10px] uppercase tracking-widest font-bold opacity-70">Presence Status</span>
+                                <button
+                                    onClick={() => toggleStatus(!userDetails.isOnline)}
+                                    className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-500 shadow-lg border backdrop-blur-sm ${userDetails.isOnline
+                                        ? "bg-green-500/20 border-green-400/30 text-green-100 hover:bg-green-500/30"
+                                        : "bg-gray-800/40 border-gray-100/10 text-gray-300 hover:bg-gray-800/60"
+                                        }`}
+                                >
+                                    <span className={`w-3 h-3 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] ${userDetails.isOnline ? "bg-green-400 animate-pulse" : "bg-gray-500"}`}></span>
+                                    <span className="font-bold text-sm tracking-wide">
+                                        {userDetails.isOnline ? "Online" : "Offline"}
+                                    </span>
+                                </button>
+                                <p className="text-[10px] opacity-50 mt-1 italic">
+                                    {userDetails.isOnline ? "Others will see you as online" : "You will appear offline to others"}
+                                </p>
+                            </div>
                         </div>
                     </div>
 

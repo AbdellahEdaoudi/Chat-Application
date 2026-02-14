@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { io } from "socket.io-client";
 import { decryptMessage } from '../utils/encryption';
 
-export const useSocket = (serverUrl, userDetails, setMessages, setOnlineUsers, privateKey) => {
+export const useSocket = (serverUrl, userDetails, setMessages, setUsers, privateKey) => {
     const [socket, setSocket] = useState(null);
     const [isTyping, setIsTyping] = useState(null); // from user ID
 
@@ -12,10 +12,6 @@ export const useSocket = (serverUrl, userDetails, setMessages, setOnlineUsers, p
             setSocket(newSocket);
 
             newSocket.emit("c_user", userDetails._id);
-
-            newSocket.on("getOnlineUsers", (users) => {
-                setOnlineUsers(users);
-            });
 
             newSocket.on("receiveMessage", (newMessage) => {
                 let msgToProcess = newMessage;
@@ -51,6 +47,12 @@ export const useSocket = (serverUrl, userDetails, setMessages, setOnlineUsers, p
                     !((msg.from?._id === from && msg.to?._id === userDetails._id) ||
                         (msg.from?._id === userDetails._id && msg.to?._id === from))
                 ));
+            });
+
+            newSocket.on("user_status_changed", ({ userId, isOnline }) => {
+                setUsers((prevUsers) =>
+                    prevUsers.map((u) => u._id === userId ? { ...u, isOnline } : u)
+                );
             });
 
             newSocket.on("user_typing", ({ from }) => {

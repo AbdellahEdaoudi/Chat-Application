@@ -58,18 +58,21 @@ function UserList() {
 
   // Mark messages as read when a user is selected
   const markAsRead = async (user) => {
-    localStorage.setItem("selectedUser", JSON.stringify(user))
-    setSelectedUser(user);
+    const selecteduser = {
+      _id: user._id,
+      profileImage: user.profileImage,
+      fullname: user.fullname,
+      email: user.email,
+      password: user.password,
+    }
+    localStorage.setItem("selectedUser", JSON.stringify(selecteduser))
+    setSelectedUser(selecteduser);
     if (window.innerWidth < 768) {
       router.push(`/chat`);
     }
   };
 
-  const list = searchQuery ? allUsers : users;
-  const displayList = list.map(user => ({
-    ...user,
-    isOnline: onlineUsers.some(u => u.userId === user._id)
-  }));
+  const displayList = searchQuery ? allUsers : users;
 
   return (
     <div className="bg-gray-800 text-white sleek-scrollbar md:border-r border-yellow-300 p-2 flex flex-col h-full overflow-hidden">

@@ -13,7 +13,7 @@ function Header() {
   const {
     logout, userDetails, users, setUsers,
     setSelectedUser, onlineUsers, SERVER_URL_V,
-    messages, setMessages
+    messages, setMessages, toggleStatus
   } = useContext(MyContext);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -34,8 +34,15 @@ function Header() {
   }, []);
 
   const markAsRead = async (user) => {
-    localStorage.setItem("selectedUser", JSON.stringify(user));
-    setSelectedUser(user);
+    const selecteduser = {
+      _id: user._id,
+      profileImage: user.profileImage,
+      fullname: user.fullname,
+      email: user.email,
+      password: user.password,
+    }
+    localStorage.setItem("selectedUser", JSON.stringify(selecteduser));
+    setSelectedUser(selecteduser);
     setShowNotifications(false);
     router.push(`/chat`);
   };
@@ -83,13 +90,22 @@ function Header() {
                         className="relative z-10 object-cover"
                       />
                     </div>
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full z-20"></span>
+                    <span
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStatus(!userDetails.isOnline); }}
+                      className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full z-20 cursor-pointer hover:scale-125 transition-transform ${userDetails.isOnline ? "bg-green-500" : "bg-gray-400"}`}
+                      title={userDetails.isOnline ? "Online - Click to go offline" : "Offline - Click to go online"}
+                    ></span>
                   </div>
                   <div className="hidden md:flex flex-col">
                     <span className="font-bold text-gray-800 text-sm leading-tight group-hover:text-blue-600 transition-colors">
                       {userDetails.fullname}
                     </span>
-                    <span className="text-xs text-gray-500 font-medium">Online</span>
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleStatus(!userDetails.isOnline); }}
+                      className={`text-[10px] font-bold text-left hover:underline decoration-dotted ${userDetails.isOnline ? "text-green-600" : "text-gray-400"}`}
+                    >
+                      {userDetails.isOnline ? "Online" : "Offline"}
+                    </button>
                   </div>
                 </Link>
 
@@ -146,7 +162,7 @@ function Header() {
                                         className="object-cover"
                                       />
                                     </div>
-                                    {onlineUsers.some(u => u.userId === user._id) && (
+                                    {user.isOnline && (
                                       <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                                     )}
                                   </div>

@@ -10,12 +10,12 @@ import { generateKeyPair, decryptMessage } from '../utils/encryption';
 export const MyContext = createContext();
 
 export const MyProvider = ({ children }) => {
-  const CLIENT_URL = "http://localhost:3000";
-  const SERVER_URL = "http://localhost:2222";
-  const SERVER_URL_V = "http://localhost:2222";
-  // const CLIENT_URL = "https://edchatflow.vercel.app"
-  // const SERVER_URL = "https://server-chat-application-s55v.onrender.com";
-  // const SERVER_URL_V = "https://chat-application-server-url.vercel.app";
+  // const CLIENT_URL = "http://localhost:3000";
+  // const SERVER_URL = "http://localhost:2222";
+  // const SERVER_URL_V = "http://localhost:2222";
+  const CLIENT_URL = "https://edchatflow.vercel.app"
+  const SERVER_URL = "https://server-chat-application-s55v.onrender.com";
+  const SERVER_URL_V = "https://chat-application-server-url.vercel.app";
 
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
@@ -27,7 +27,7 @@ export const MyProvider = ({ children }) => {
   const router = useRouter();
   const toast = useToast();
 
-  const { socket, isTyping } = useSocket(SERVER_URL, userDetails, setMessages, setOnlineUsers, privateKey);
+  const { socket, isTyping } = useSocket(SERVER_URL, userDetails, setMessages, setUsers, privateKey);
 
   useEffect(() => {
     const data = localStorage.getItem("selectedUser");
@@ -140,7 +140,32 @@ export const MyProvider = ({ children }) => {
     }
   }, [messages, userDetails]);
 
-  // E2EE Key Initialization
+  // Toggle manual status
+  const toggleStatus = async (status) => {
+    try {
+      const response = await axios.put(`${SERVER_URL_V}/update_status`, { isOnline: status }, { withCredentials: true });
+      if (response.data.success) {
+        const updatedUser = { ...userDetails, isOnline: status };
+        setUserDetails(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 401 || status === 403 || status === 404) {
+          console.log(`Auth error (${status}). Logging out...`);
+          let msg = "Session expired. Please login again.";
+          if (status === 404) msg = "User not found. Please login again.";
+          if (status === 401) msg = "Authentication required. Please login.";
+          if (toast) toast.error(msg);
+          logout();
+        } else {
+          if (toast) toast.error(error.response.data.message);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     const initE2EE = async () => {
       if (!userDetails || !userDetails._id) return;
@@ -187,7 +212,7 @@ export const MyProvider = ({ children }) => {
         isLoading, setIsLoading, selectedUser, setSelectedUser,
         email: userDetails?.email,
         getMessages, socket, onlineUsers,
-        privateKey, isTyping
+        privateKey, isTyping, toggleStatus
       }}
     >
       {children}
