@@ -40,6 +40,7 @@ function Header() {
       fullname: user.fullname,
       email: user.email,
       password: user.password,
+      publicKey: user.publicKey,
     }
     localStorage.setItem("selectedUser", JSON.stringify(selecteduser));
     setSelectedUser(selecteduser);
