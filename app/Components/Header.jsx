@@ -45,7 +45,7 @@ function Header() {
     localStorage.setItem("selectedUser", JSON.stringify(selecteduser));
     setSelectedUser(selecteduser);
     setShowNotifications(false);
-    router.push(`/chat`);
+    router.push(`/`);
   };
 
   const Logout = async () => {
@@ -194,6 +194,17 @@ function Header() {
                     )}
                   </AnimatePresence>
                 </div>
+                
+                {/* Admin Button */}
+                {userDetails?.isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="hidden md:flex bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200 px-4 py-2 rounded-lg transition-all duration-300 items-center gap-2 font-medium text-sm shadow-sm hover:shadow-md"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Admin</span>
+                  </Link>
+                )}
 
                 {/* Logout Button */}
                 <button
