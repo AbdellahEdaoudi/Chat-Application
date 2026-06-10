@@ -7,6 +7,8 @@ import EmojiPicker from "emoji-picker-react";
 import { EllipsisVertical, Mail, Phone, CircleX, Send, Copy, Edit, Trash2, Check, CheckCheck, Search, Reply } from "@/app/Components/lucide-react/lucide-react";
 import { encryptMessage, decryptMessage } from "../utils/encryption";
 import Linkify from "linkify-react";
+import * as linkify from "linkifyjs";
+import LinkPreview from "./LinkPreview";
 import { MyContext } from "../Context/MyContext";
 import { useToast } from "./toast";
 import { Spinner } from "./lucide-react/lucide-react";
@@ -631,7 +633,27 @@ function Messages() {
                             })()
                           )}
                           <div className="whitespace-pre-wrap break-words">
-                            <Linkify>{highlightSearchTerm(msg.message, msgSearchQuery)}</Linkify>
+                            <Linkify options={{ target: '_blank', rel: 'noopener noreferrer' }}>{highlightSearchTerm(msg.message, msgSearchQuery)}</Linkify>
+                            {(() => {
+                              const links = linkify.find(msg.message || "").filter(link => {
+                                if (link.type !== 'url') return false;
+                                try {
+                                  return new URL(link.href).hostname.includes('.');
+                                } catch (e) {
+                                  return false;
+                                }
+                              });
+                              if (links.length > 0) {
+                                return (
+                                  <div className="mt-2 space-y-2">
+                                    {links.map((link, idx) => (
+                                      <LinkPreview key={`${link.href}-${idx}`} url={link.href} isMe={msg.from?.email === email} />
+                                    ))}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         </div>
 
@@ -788,8 +810,26 @@ function Messages() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className="bg-gray-100 p-2.5 rounded-xl border border-gray-200 shadow-sm mx-1">
-              <div className="flex items-center gap-3">
+            <div className="bg-gray-100 p-2.5 rounded-xl border border-gray-200 shadow-sm mx-1 flex flex-col">
+              {(() => {
+                const links = linkify.find(messageInput || "").filter(link => {
+                  if (link.type !== 'url') return false;
+                  try {
+                    return new URL(link.href).hostname.includes('.');
+                  } catch (e) {
+                    return false;
+                  }
+                });
+                if (links.length > 0) {
+                  return (
+                    <div className="mb-2 w-full max-w-xs self-start">
+                      <LinkPreview key={links[0].href} url={links[0].href} />
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <div className="flex items-center gap-3 w-full">
                 <div
                   onClick={() => setEmoji(!emoji)}
                   className="cursor-pointer p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all emoji-toggle mb-1"

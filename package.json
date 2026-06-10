@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "axios": "^1.7.2",
+    "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "country-flag-emoji-polyfill": "^0.1.8",
     "crypto-js": "^4.2.0",

@@ -69,7 +69,7 @@ function UserList() {
     localStorage.setItem("selectedUser", JSON.stringify(selecteduser))
     setSelectedUser(selecteduser);
     if (window.innerWidth < 768) {
-      router.push(`/`);
+      router.push(`/chat`);
     }
   };
 
