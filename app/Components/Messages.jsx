@@ -4,15 +4,18 @@ import Image from "next/image";
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { BsEmojiSmile, BsChatSquareDots } from "react-icons/bs";
 import EmojiPicker from "emoji-picker-react";
-import { EllipsisVertical, Mail, Phone, CircleX, Send, Copy, Edit, Trash2, Check, CheckCheck, Search, Reply } from "@/app/Components/lucide-react/lucide-react";
+import { EllipsisVertical, Mail, Phone, CircleX, Send, Copy, Edit, Trash2, Check, CheckCheck, Search, Reply, Languages, Volume2, Clock } from "@/app/Components/lucide-react/lucide-react";
 import { encryptMessage, decryptMessage } from "../utils/encryption";
 import Linkify from "linkify-react";
 import * as linkify from "linkifyjs";
 import LinkPreview from "./LinkPreview";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { MyContext } from "../Context/MyContext";
 import { useToast } from "./toast";
 import { Spinner } from "./lucide-react/lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { translateText } from "@/app/actions/translate";
 
 
 function Messages() {
@@ -30,6 +33,12 @@ function Messages() {
   const [replyingTo, setReplyingTo] = useState(null);
   const [msgSearchQuery, setMsgSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [showTranslateModal, setShowTranslateModal] = useState(false);
+  const [msgToTranslate, setMsgToTranslate] = useState(null);
+  const [targetLanguage, setTargetLanguage] = useState("ar");
+  const [loadingTranslation, setLoadingTranslation] = useState(false);
+  const [translatedMessages, setTranslatedMessages] = useState({});
+  const [ttsState, setTtsState] = useState(null); // { msgId, charIndex, charLength }
 
   const messageInputRef = useRef(null);
   const umessageRef = useRef(null);
@@ -62,12 +71,93 @@ function Messages() {
     const matchesFilter = (fromId === myId && toId === selectedId) ||
       (fromId === selectedId && toId === myId);
 
+    if (!matchesFilter) return false;
+
     if (msgSearchQuery.trim() !== "") {
-      return matchesFilter && fl.message.toLowerCase().includes(msgSearchQuery.toLowerCase());
+      return fl.message.toLowerCase().includes(msgSearchQuery.toLowerCase());
     }
 
-    return matchesFilter;
-  }).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    return true;
+  }).sort((a, b) => {
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
+  const playMessage = (text, msgId) => {
+    if (!("speechSynthesis" in window)) {
+      toast.error("Text-to-speech not supported in this browser");
+      return;
+    }
+    // Toggle pause/resume if same message is already speaking
+    if (ttsState?.msgId === msgId) {
+      if (window.speechSynthesis.speaking) {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+          setTtsState(prev => ({ ...prev, isPaused: false }));
+        } else {
+          window.speechSynthesis.pause();
+          setTtsState(prev => ({ ...prev, isPaused: true }));
+        }
+      }
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const speechMsg = new SpeechSynthesisUtterance(text);
+    
+    // Language detection to improve TTS accuracy
+    let detectedLang = '';
+    if (/[\u0600-\u06FF]/.test(text)) detectedLang = 'ar-SA';
+    else if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text)) detectedLang = 'ja-JP';
+    else if (/[\uAC00-\uD7AF]/.test(text)) detectedLang = 'ko-KR';
+    else if (/[\u0400-\u04FF]/.test(text)) detectedLang = 'ru-RU';
+
+    if (detectedLang) {
+      speechMsg.lang = detectedLang;
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const prefix = detectedLang.split('-')[0];
+        // 1. Google voices usually have better online TTS
+        let voice = voices.find(v => v.lang.toLowerCase().startsWith(prefix) && v.name.includes('Google'));
+        // 2. Any voice matching the lang prefix
+        if (!voice) voice = voices.find(v => v.lang.toLowerCase().startsWith(prefix));
+        
+        if (voice) {
+          speechMsg.voice = voice;
+          speechMsg.lang = voice.lang; // Use the exact lang code of the voice
+        } else {
+          toast.error("Your browser doesn't have a voice installed for this language.", { duration: 4000 });
+        }
+      }
+    }
+
+    // Initial state — no word highlighted yet
+    setTtsState({ msgId, charIndex: -1, charLength: 0, isPaused: false });
+    speechMsg.onboundary = (event) => {
+      if (event.name === 'word') {
+        setTtsState(prev => prev && prev.msgId === msgId ? { ...prev, charIndex: event.charIndex, charLength: event.charLength } : prev);
+      }
+    };
+    speechMsg.onend = () => setTtsState(prev => prev?.msgId === msgId ? null : prev);
+    speechMsg.onerror = () => setTtsState(prev => prev?.msgId === msgId ? null : prev);
+    window.speechSynthesis.speak(speechMsg);
+  };
+
+  // Renders plain text with the currently spoken word highlighted
+  const renderTextWithTTSHighlight = (text, msgId) => {
+    if (!ttsState || ttsState.msgId !== msgId || ttsState.charIndex < 0) {
+      return <>{text}</>;
+    }
+    const { charIndex, charLength } = ttsState;
+    const before = text.substring(0, charIndex);
+    const word = text.substring(charIndex, charIndex + charLength);
+    const after = text.substring(charIndex + charLength);
+    return (
+      <>
+        {before}
+        <mark className="bg-yellow-300 text-black rounded px-0.5 shadow-sm">{word}</mark>
+        {after}
+      </>
+    );
+  };
 
   const scrollToMessage = (id) => {
     const el = document.getElementById(id);
@@ -93,6 +183,82 @@ function Messages() {
       ) : part
     );
   };
+
+  const renderMessageWithCode = (text, query, msgId) => {
+    if (!text) return null;
+    const isActiveTTS = ttsState?.msgId === msgId;
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+      }
+      parts.push({ type: 'code', language: match[1] || 'javascript', content: match[2] });
+      lastIndex = codeBlockRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push({ type: 'text', content: text.substring(lastIndex) });
+    }
+
+    return parts.map((part, index) => {
+      if (part.type === 'text') {
+        return (
+          <span key={index}>
+            <Linkify options={{ target: '_blank', rel: 'noopener noreferrer', className: 'text-blue-500 hover:text-blue-600 underline font-medium break-all' }}>
+              {isActiveTTS
+                ? renderTextWithTTSHighlight(part.content, msgId)
+                : highlightSearchTerm(part.content, query)}
+            </Linkify>
+          </span>
+        );
+      } else {
+        return (
+          <div key={index} className="my-2 relative group max-w-full overflow-hidden rounded-md text-left" dir="ltr">
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              <button
+                onClick={(e) => {
+                   e.stopPropagation();
+                   navigator.clipboard.writeText(part.content);
+                   toast.success("Code copied!");
+                }}
+                className="p-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs flex items-center gap-1 shadow-sm"
+                title="Copy Code"
+              >
+                <Copy size={12} className="w-3 h-3 text-white" />
+                Copy
+              </button>
+            </div>
+            <div className="text-xs text-gray-400 bg-[#1e1e1e] px-3 py-1 rounded-t-md font-mono border-b border-gray-700">
+               {part.language}
+            </div>
+            <SyntaxHighlighter
+              language={part.language}
+              style={vscDarkPlus}
+              customStyle={{ margin: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0, fontSize: '0.85rem' }}
+              wrapLines={true}
+              wrapLongLines={true}
+            >
+              {part.content}
+            </SyntaxHighlighter>
+          </div>
+        );
+      }
+    });
+  };
+
+  // Initialize TTS voices to prevent empty voices array on first click (Chrome bug)
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
 
   // Scroll logic
   useEffect(() => {
@@ -225,7 +391,6 @@ function Messages() {
         ...response.data,
         message: messageInput // Display clear text on sender side
       };
-
       setMessages((prev) => [...prev, savedMsg]);
       setUsers((prev) => prev.map((u) => u._id === selectedUser._id ? { ...u, lastMessage: `You: ${messageInput}` } : u));
 
@@ -233,8 +398,8 @@ function Messages() {
         // Send the full populated message from response.data so the recipient has replyTo info
         socket.emit("send_msg", { ...response.data, to: selectedUser });
       }
-
       toast.success("Sent successfully");
+      
       setMessageInput("");
       setReplyingTo(null);
       setEmoji(true);
@@ -598,10 +763,11 @@ function Messages() {
                         </div>
 
                         <div
-                          className={`p-2 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed ${msg.from?.email === email
-                            ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl rounded-tr-none"
-                            : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 rounded-2xl rounded-tl-none border border-gray-200"
-                            }`}>
+                          className={`p-2 shadow-sm md:text-base text-[13px] max-w-[85%] md:max-w-[75%] leading-relaxed transition-all ${
+                            msg.from?.email === email
+                              ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl rounded-tr-none"
+                              : "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 rounded-2xl rounded-tl-none border border-gray-200"
+                          } ${ttsState?.msgId === msg._id ? "ring-2 ring-purple-400 ring-offset-1" : ""}`}>
                           {msg.replyTo && (
                             (() => {
                               const replyId = typeof msg.replyTo === 'object' ? msg.replyTo._id : msg.replyTo;
@@ -633,7 +799,7 @@ function Messages() {
                             })()
                           )}
                           <div className="whitespace-pre-wrap break-words">
-                            <Linkify options={{ target: '_blank', rel: 'noopener noreferrer' }}>{highlightSearchTerm(msg.message, msgSearchQuery)}</Linkify>
+                            {renderMessageWithCode(msg.message, msgSearchQuery, msg._id)}
                             {(() => {
                               const links = linkify.find(msg.message || "").filter(link => {
                                 if (link.type !== 'url') return false;
@@ -654,6 +820,13 @@ function Messages() {
                               }
                               return null;
                             })()}
+                            {translatedMessages[msg._id] && (
+                              <div className="mt-2 pt-2 border-t border-gray-300/30 text-sm">
+                                <p className="text-[10px] text-indigo-500 font-semibold mb-0.5">Translated ({translatedMessages[msg._id].language.toUpperCase()}):</p>
+                                <p>{translatedMessages[msg._id].text}</p>
+                              </div>
+                            )}
+
                           </div>
                         </div>
 
@@ -692,6 +865,45 @@ function Messages() {
 
                                 <button
                                   onClick={() => {
+                                    playMessage(msg.message, msg._id);
+                                    setActiveMessageMenu(null);
+                                  }}
+                                  className={`w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm rounded-xl md:rounded-lg transition-colors text-left ${
+                                    ttsState?.msgId === msg._id
+                                      ? "bg-purple-100 text-purple-700 font-semibold"
+                                      : "text-gray-700 hover:bg-purple-50 hover:text-purple-600"
+                                  }`}
+                                >
+                                  <Volume2 size={16} className="md:w-4 md:h-4" />
+                                  <span className="font-medium md:font-normal">
+                                    {ttsState?.msgId === msg._id ? (ttsState.isPaused ? "Resume Reading" : "Pause Reading") : "Read Aloud"}
+                                  </span>
+                                  {ttsState?.msgId === msg._id && !ttsState.isPaused && (
+                                    <span className="ml-auto flex gap-0.5">
+                                      <span className="w-1 h-3 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                      <span className="w-1 h-3 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                      <span className="w-1 h-3 bg-purple-500 rounded-full animate-bounce" />
+                                    </span>
+                                  )}
+                                </button>
+
+                                {ttsState?.msgId === msg._id && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.speechSynthesis.cancel();
+                                      setTtsState(null);
+                                      setActiveMessageMenu(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl md:rounded-lg transition-colors text-left font-medium"
+                                  >
+                                    <CircleX size={16} className="md:w-4 md:h-4" />
+                                    <span>Stop Reading</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => {
                                     setReplyingTo(msg);
                                     setActiveMessageMenu(null);
                                     messageInputRef.current?.focus();
@@ -701,6 +913,20 @@ function Messages() {
                                   <Reply size={16} className="md:w-4 md:h-4" />
                                   <span className="font-medium md:font-normal">Reply</span>
                                 </button>
+
+                                {msg.from?.email !== email && (
+                                  <button
+                                    onClick={() => {
+                                      setMsgToTranslate(msg);
+                                      setShowTranslateModal(true);
+                                      setActiveMessageMenu(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 md:px-3 md:py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 rounded-xl md:rounded-lg transition-colors text-left"
+                                  >
+                                    <Languages size={16} className="md:w-4 md:h-4" />
+                                    <span className="font-medium md:font-normal">Translate</span>
+                                  </button>
+                                )}
 
                                 {msg.from?.email === email && (
                                   <>
@@ -830,11 +1056,27 @@ function Messages() {
                 return null;
               })()}
               <div className="flex items-center gap-3 w-full">
-                <div
-                  onClick={() => setEmoji(!emoji)}
-                  className="cursor-pointer p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all emoji-toggle mb-1"
-                >
-                  <BsEmojiSmile size={22} />
+                <div className="flex items-center gap-1 shrink-0">
+                  <div
+                    onClick={() => setEmoji(!emoji)}
+                    className="cursor-pointer p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all emoji-toggle mb-1"
+                  >
+                    <BsEmojiSmile size={22} />
+                  </div>
+                  <div
+                    onClick={() => {
+                      if (messageInput.trim()) {
+                        setMsgToTranslate('input');
+                        setShowTranslateModal(true);
+                      } else {
+                        toast.error("Type a message to translate it");
+                      }
+                    }}
+                    className={`cursor-pointer p-2.5 rounded-lg transition-all mb-1 ${messageInput.trim() ? "text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700" : "text-gray-300"}`}
+                    title="Translate before sending"
+                  >
+                    <Languages size={22} />
+                  </div>
                 </div>
 
                 <textarea
@@ -868,16 +1110,18 @@ function Messages() {
                   rows={1}
                 />
 
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={loading || !messageInput.trim()}
-                  className={`flex items-center justify-center w-11 h-11 shrink-0 rounded-xl transition-all duration-300 shadow-lg mb-0.5
-                    ${loading || !messageInput.trim()
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 shadow-indigo-200"}`}
-                >
-                  {loading ? <Spinner className="w-5 h-5 text-gray-400" /> : <Send size={20} />}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={loading || !messageInput.trim()}
+                    className={`flex items-center justify-center w-11 h-11 shrink-0 rounded-xl transition-all duration-300 shadow-lg mb-0.5
+                      ${loading || !messageInput.trim()
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 shadow-indigo-200"}`}
+                  >
+                    {loading ? <Spinner className="w-5 h-5 text-gray-400" /> : <Send size={20} />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -966,6 +1210,20 @@ function Messages() {
                       className="cursor-pointer p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all emoji-toggle"
                     >
                       <BsEmojiSmile size={16} className="md:w-5 md:h-5" />
+                    </div>
+                    <div
+                      onClick={() => {
+                        if (umessage.trim()) {
+                          setMsgToTranslate('edit');
+                          setShowTranslateModal(true);
+                        } else {
+                          toast.error("Type a message to translate it");
+                        }
+                      }}
+                      className={`cursor-pointer p-1 rounded-lg transition-all ${umessage.trim() ? "text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700" : "text-gray-300"}`}
+                      title="Translate before saving"
+                    >
+                      <Languages size={16} className="md:w-5 md:h-5" />
                     </div>
                   </div>
                   {showEditModal && (
@@ -1063,6 +1321,87 @@ function Messages() {
           </div>
         )
       }
+
+      {
+        showTranslateModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200" onClick={() => setShowTranslateModal(false)}>
+            <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-xl font-bold mb-4 text-gray-800">
+                {msgToTranslate === 'input' || msgToTranslate === 'edit' ? 'Translate Your Message' : 'Translate Message'}
+              </h3>
+              <select 
+                value={targetLanguage} 
+                onChange={(e) => setTargetLanguage(e.target.value)}
+                className="w-full p-2.5 mb-6 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 bg-gray-50"
+              >
+                <option value="ar">🇸🇦 Arabic</option>
+                <option value="en">🇺🇸 English</option>
+                <option value="fr">🇫🇷 French</option>
+                <option value="es">🇪🇸 Spanish</option>
+                <option value="de">🇩🇪 German</option>
+                <option value="it">🇮🇹 Italian</option>
+                <option value="ru">🇷🇺 Russian</option>
+                <option value="tr">🇹🇷 Turkish</option>
+                <option value="zh-CN">🇨🇳 Chinese</option>
+                <option value="ja">🇯🇵 Japanese</option>
+                <option value="ko">🇰🇷 Korean</option>
+                <option value="hi">🇮🇳 Hindi</option>
+                <option value="pt">🇵🇹 Portuguese</option>
+              </select>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowTranslateModal(false)}
+                  className="px-5 py-2.5 text-gray-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setLoadingTranslation(true);
+                    try {
+                      const isInput = msgToTranslate === 'input';
+                      const isEdit = msgToTranslate === 'edit';
+                      const textToTranslate = isInput ? messageInput : (isEdit ? umessage : msgToTranslate.message);
+                      const data = await translateText(textToTranslate, targetLanguage);
+                      
+                      if(data.translatedText) {
+                        if (isInput) {
+                          setMessageInput(data.translatedText);
+                          toast.success("Message translated! Ready to send.");
+                        } else if (isEdit) {
+                          setUMessage(data.translatedText);
+                          toast.success("Message translated! Ready to save.");
+                        } else {
+                          setTranslatedMessages(prev => ({
+                            ...prev,
+                            [msgToTranslate._id]: {
+                              language: targetLanguage,
+                              text: data.translatedText
+                            }
+                          }));
+                          toast.success("Translated successfully");
+                        }
+                      } else {
+                        toast.error(data.error || "Translation failed");
+                      }
+                    } catch(err) {
+                       toast.error("Translation error");
+                    } finally {
+                      setLoadingTranslation(false);
+                      setShowTranslateModal(false);
+                    }
+                  }}
+                  disabled={loadingTranslation}
+                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 font-bold min-w-[120px] shadow-lg shadow-indigo-200"
+                >
+                  {loadingTranslation ? <Spinner className="w-5 h-5 text-white" /> : "Translate"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
 
       {
         showProfileModal && selectedUser && (

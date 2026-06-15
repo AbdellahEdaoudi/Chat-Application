@@ -194,3 +194,29 @@ export const Reply = (props) => (
         <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
     </svg>
 );
+
+export const Languages = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path d="m5 8 6 6" />
+        <path d="m4 14 6-6 2-3" />
+        <path d="M2 5h12" />
+        <path d="M7 2h1" />
+        <path d="m22 22-5-10-5 10" />
+        <path d="M14 18h6" />
+    </svg>
+);
+
+export const Volume2 = (props) => (
+    <svg {...defaultProps} {...props}>
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+);
+
+export const Clock = (props) => (
+    <svg {...defaultProps} {...props}>
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+    </svg>
+);
